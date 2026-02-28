@@ -28,17 +28,17 @@ Make sure `~/.local/bin` is on PATH for tmux sessions, or set `@tmux-todo-bin` e
 
 ### TPM install
 
-When published to a repo, add to `~/.tmux.conf`:
+Add to `~/.tmux.conf`:
 
 ```tmux
-set -g @plugin 'your-org/tmux-todo'
+set -g @plugin '0x-JP/tmux-todo'
 ```
 
 For local development with TPM:
 
 ```bash
 mkdir -p ~/.tmux/plugins
-ln -sfn /home/jp/src/tmux-todo ~/.tmux/plugins/tmux-todo
+ln -sfn /path/to/tmux-todo ~/.tmux/plugins/tmux-todo
 ```
 
 Then in `~/.tmux.conf`:
