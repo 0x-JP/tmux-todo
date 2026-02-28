@@ -30,11 +30,24 @@ if [ -n "$bind_peek" ]; then
 fi
 
 focus_alert="$(tmux show-option -gqv @tmux-todo-focus-alert)"
+# Remove stale tmux-todo focus hooks first, then add current one when enabled.
+existing_hooks="$(tmux show-hooks -g pane-focus-in 2>/dev/null || true)"
+while IFS= read -r line; do
+  case "$line" in
+    *focus-alert.sh*)
+      idx="$(printf "%s" "$line" | sed -n 's/^pane-focus-in\[\([0-9][0-9]*\)\].*/\1/p')"
+      if [ -n "$idx" ]; then
+        tmux set-hook -gu "pane-focus-in[$idx]"
+      fi
+      ;;
+  esac
+done <<EOF
+$existing_hooks
+EOF
+
 case "${focus_alert,,}" in
   on|true|1|yes)
     hook_cmd="run-shell '$CURRENT_DIR/scripts/focus-alert.sh \"#{pane_current_path}\"'"
-    if ! tmux show-hooks -g pane-focus-in 2>/dev/null | grep -Fq "$CURRENT_DIR/scripts/focus-alert.sh"; then
-      tmux set-hook -ag pane-focus-in "$hook_cmd"
-    fi
+    tmux set-hook -ag pane-focus-in "$hook_cmd"
     ;;
 esac

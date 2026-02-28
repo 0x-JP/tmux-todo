@@ -17,6 +17,12 @@ Context-aware tmux todo manager with:
 - tmux with popup support (`display-popup`, tmux 3.2+ recommended)
 - Go 1.22+
 
+Important:
+
+- TPM installs/sources tmux plugin scripts.
+- TPM does **not** build or install the `tmux-todo` Go binary.
+- You must install the binary separately (choose one method below).
+
 ### Build binary
 
 ```bash
@@ -25,6 +31,18 @@ go build -o ~/.local/bin/tmux-todo ./cmd/tmux-todo
 ```
 
 Make sure `~/.local/bin` is on PATH for tmux sessions, or set `@tmux-todo-bin` explicitly in `.tmux.conf`.
+
+### Install binary with `go install` (recommended for users)
+
+```bash
+go install github.com/0x-JP/tmux-todo/cmd/tmux-todo@latest
+```
+
+If your `GOBIN`/`GOPATH/bin` is not on PATH in tmux, set `@tmux-todo-bin` to the absolute binary path.
+
+### Install from release binary (recommended for team rollout)
+
+When release assets are available, download the binary and place it on PATH (for example `~/.local/bin/tmux-todo`).
 
 ### TPM install
 
@@ -124,6 +142,8 @@ bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_cu
 - `q` quit
 
 ## CLI Reference
+
+Tip: run `tmux-todo help` for built-in command help.
 
 ### Add
 
