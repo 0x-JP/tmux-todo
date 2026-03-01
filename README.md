@@ -322,11 +322,26 @@ User config (tag registry):
 - `$XDG_CONFIG_HOME/tmux-todo/config.json`
 - fallback: `~/.config/tmux-todo/config.json`
 
+Important:
+
+- `config.json` does **not** control where `todos.json` is stored.
+- `config.json` stores user settings (tags + UI state), not todo data path.
+
 You can override todo data path:
 
 ```bash
 tmux-todo --data /path/to/todos.json tui
 ```
+
+Path resolution priority for todo data:
+
+1. `--data /custom/path.json`
+2. `$XDG_STATE_HOME/tmux-todo/todos.json`
+3. `~/.local/state/tmux-todo/todos.json`
+
+tmux popup modes (`T`, `t`, `Ctrl-t`) use the environment of your tmux server.
+If you want a custom default location without passing `--data`, set `XDG_STATE_HOME`
+before starting tmux (or restart tmux server after changing it).
 
 ## Troubleshooting
 
