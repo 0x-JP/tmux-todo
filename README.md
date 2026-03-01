@@ -106,6 +106,51 @@ bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_cu
 bind-key C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane_current_path}'"
 ```
 
+## Recommended Config (Current Working Profile)
+
+This mirrors the setup used during development and dogfooding:
+
+```tmux
+# plugin
+set -g @plugin '0x-JP/tmux-todo'
+
+# binary
+set -g @tmux-todo-bin "$HOME/.local/bin/tmux-todo"
+
+# popup sizing
+set -g @tmux-todo-popup-width "80%"
+set -g @tmux-todo-popup-height "80%"
+set -g @tmux-todo-peek-width "45%"
+set -g @tmux-todo-peek-height "35%"
+set -g @tmux-todo-focus-width "24%"
+set -g @tmux-todo-focus-height "14%"
+set -g @tmux-todo-quick-width "46%"
+set -g @tmux-todo-quick-height "18%"
+
+# rendering + timing
+set -g @tmux-todo-strikethrough "on"
+set -g @tmux-todo-alert-duration-ms "5000"
+set -g @tmux-todo-focus-duration-ms "2000"
+
+# focus alert behavior
+set -g @tmux-todo-focus-alert "on"
+set -g @tmux-todo-focus-on-context-switch "on"
+set -g @tmux-todo-focus-include-global "off"
+set -g @tmux-todo-focus-cooldown-sec "0"
+
+# keybindings
+bind-key T run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh full '#{pane_current_path}'"
+bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_current_path}'"
+bind-key -n C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane_current_path}'"
+```
+
+For consistent paths across machines/sessions, you can also set:
+
+```tmux
+set-environment -g XDG_STATE_HOME "$HOME/.local/state"
+set-environment -g XDG_CONFIG_HOME "$HOME/.config"
+```
+
 ## Plugin Options
 
 - `@tmux-todo-bin` default: `tmux-todo`
