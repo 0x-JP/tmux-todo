@@ -32,6 +32,7 @@ Commands:
   summary                   print context/global summary counters
   doctor                    validate paths and local setup
   export                    export data/config snapshot
+  clear-all                 clear all tasks (requires --yes)
   context-key               print current context key
   tags list|add|remove      manage per-user tag registry
   help                      show this help

@@ -76,3 +76,24 @@ func TestRestoreUIState(t *testing.T) {
 		t.Fatalf("unexpected selected entry: %#v", e)
 	}
 }
+
+func TestRestoreUIStateDoesNotOverrideCurrentContextMode(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "todos.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.New(filepath.Join(dir, "config.json"), store.DefaultTags)
+	if err != nil {
+		t.Fatal(err)
+	}
+	uiState := config.UIState{MainMode: "all"}
+	if err := cfg.SaveUI(uiState); err != nil {
+		t.Fatal(err)
+	}
+	ctx := gitctx.Context{RepoRoot: "/repo", WorktreeRoot: "/repo/wt", Branch: "feat"}
+	m := NewMainModel(st, cfg, ctx, false)
+	if m.mode != viewContext {
+		t.Fatalf("mode = %v, want %v", m.mode, viewContext)
+	}
+}

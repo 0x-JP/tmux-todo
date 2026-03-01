@@ -215,7 +215,10 @@ tmux-todo has-high --context-only
 tmux-todo summary --json
 tmux-todo doctor --json
 tmux-todo export --out ~/tmux-todo-export.json --json
+tmux-todo clear-all --yes --json
 ```
+
+`clear-all` is destructive and requires `--yes`.
 
 ### Tag Registry (Per User)
 

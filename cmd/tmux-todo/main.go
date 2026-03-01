@@ -148,6 +148,10 @@ func main() {
 		if err := runExport(st, cfg, ctx, args[1:]); err != nil {
 			fatal(err)
 		}
+	case "clear-all":
+		if err := runClearAll(st, args[1:]); err != nil {
+			fatal(err)
+		}
 	case "tags":
 		if err := runTags(st, cfg, args[1:]); err != nil {
 			fatal(err)

@@ -143,6 +143,27 @@ func TestCLIJSONFlows(t *testing.T) {
 	if doctor["action"] != "doctor" {
 		t.Fatalf("unexpected doctor action: %#v", doctor["action"])
 	}
+
+	if err := runClearAll(st, []string{}); err == nil {
+		t.Fatal("expected clear-all without --yes to fail")
+	}
+	out, err = captureStdout(func() error {
+		return runClearAll(st, []string{"--yes", "--json"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var clearRes map[string]any
+	if err := json.Unmarshal([]byte(out), &clearRes); err != nil {
+		t.Fatal(err)
+	}
+	if clearRes["action"] != "clear-all" {
+		t.Fatalf("unexpected clear-all action: %#v", clearRes["action"])
+	}
+	snap := st.Snapshot()
+	if len(snap.Global) != 0 || len(snap.Contexts) != 0 {
+		t.Fatalf("expected empty store after clear-all: %+v", snap)
+	}
 }
 
 func captureStdout(fn func() error) (string, error) {

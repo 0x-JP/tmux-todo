@@ -520,6 +520,18 @@ func (s *Store) RemoveTag(tag string) error {
 	return s.saveLocked()
 }
 
+func (s *Store) Reset() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data.Global = []Todo{}
+	s.data.Contexts = map[string][]Todo{}
+	s.data.Meta = map[string]MetaInfo{}
+	if s.data.Version < 2 {
+		s.data.Version = 2
+	}
+	return s.saveLocked()
+}
+
 func (s *Store) listForScope(scope Scope, contextKey string) ([]Todo, error) {
 	switch scope {
 	case ScopeGlobal:

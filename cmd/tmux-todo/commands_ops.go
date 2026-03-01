@@ -192,3 +192,29 @@ func runExport(st *store.Store, cfg *config.Store, ctx gitctx.Context, args []st
 	fmt.Println("exported", outPath)
 	return nil
 }
+
+func runClearAll(st *store.Store, args []string) error {
+	fs := flag.NewFlagSet("clear-all", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	var yes bool
+	var jsonOut bool
+	fs.BoolVar(&yes, "yes", false, "confirm destructive clear")
+	fs.BoolVar(&jsonOut, "json", false, "print machine-readable JSON output")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if !yes {
+		return errors.New("refusing to clear tasks without --yes")
+	}
+	if err := st.Reset(); err != nil {
+		return err
+	}
+	if jsonOut {
+		return printJSON(map[string]any{
+			"ok":     true,
+			"action": "clear-all",
+		})
+	}
+	fmt.Println("cleared all tasks")
+	return nil
+}
