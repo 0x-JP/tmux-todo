@@ -51,7 +51,7 @@ func Parse(input, defaultContextKey string) (Spec, error) {
 				}
 				spec.Priority = p
 			case "t", "tag", "tags":
-				spec.Tags = store.NormalizeTags([]string{value})
+				spec.Tags = store.NormalizeTags(append(spec.Tags, value))
 			default:
 				return Spec{}, fmt.Errorf("unknown option %q (supported: p=high|med|low or p=1|2|3, t=tag1,tag2)", key)
 			}

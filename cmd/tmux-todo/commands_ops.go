@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jp/tmux-todo/internal/config"
+	"github.com/jp/tmux-todo/internal/fileio"
 	"github.com/jp/tmux-todo/internal/gitctx"
 	"github.com/jp/tmux-todo/internal/store"
 )
@@ -183,7 +184,7 @@ func runExport(st *store.Store, cfg *config.Store, ctx gitctx.Context, args []st
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(outPath, b, 0o644); err != nil {
+	if err := fileio.WriteFileAtomic(outPath, b, 0o644); err != nil {
 		return err
 	}
 	if jsonOut {

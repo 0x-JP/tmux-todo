@@ -84,6 +84,16 @@ func TestParse(t *testing.T) {
 				Tags:       []string{"blocked"},
 			},
 		},
+		{
+			name:  "multiple tag directives merge",
+			input: "task 5 | t=blocked | tags=review",
+			want: Spec{
+				Scope:      store.ScopeContext,
+				ContextKey: ctx,
+				Text:       "task 5",
+				Tags:       []string{"blocked", "review"},
+			},
+		},
 		{name: "missing text", input: "global | p=1", wantErr: true},
 		{name: "bad option", input: "task 1 | x=1", wantErr: true},
 		{name: "bad priority", input: "task 1 | p=9", wantErr: true},
