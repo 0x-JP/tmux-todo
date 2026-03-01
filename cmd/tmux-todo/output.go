@@ -79,6 +79,10 @@ func printJSON(v any) error {
 	return enc.Encode(v)
 }
 
+func jsonMarshalIndent(v any) ([]byte, error) {
+	return json.MarshalIndent(v, "", "  ")
+}
+
 func parseScope(v string) (store.Scope, error) {
 	switch strings.ToLower(v) {
 	case "context":

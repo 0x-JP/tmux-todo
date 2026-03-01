@@ -1,8 +1,11 @@
 package ui
 
 import (
+	"path/filepath"
 	"testing"
 
+	"github.com/jp/tmux-todo/internal/config"
+	"github.com/jp/tmux-todo/internal/gitctx"
 	"github.com/jp/tmux-todo/internal/store"
 )
 
@@ -41,5 +44,35 @@ func TestToggleTag(t *testing.T) {
 	got = toggleTag(got, "blocked")
 	if hasTag(got, "blocked") {
 		t.Fatalf("expected blocked removed: %v", got)
+	}
+}
+
+func TestRestoreUIState(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.New(filepath.Join(dir, "todos.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	td, err := st.Add(store.ScopeGlobal, "", "g task", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.New(filepath.Join(dir, "config.json"), store.DefaultTags)
+	if err != nil {
+		t.Fatal(err)
+	}
+	uiState := config.UIState{MainMode: "global"}
+	uiState.Selected.Scope = "global"
+	uiState.Selected.ID = td.ID
+	if err := cfg.SaveUI(uiState); err != nil {
+		t.Fatal(err)
+	}
+	m := NewMainModel(st, cfg, gitctx.Context{Branch: "global"}, false)
+	if m.mode != viewGeneral {
+		t.Fatalf("mode = %v, want %v", m.mode, viewGeneral)
+	}
+	e := m.currentEntry()
+	if e == nil || e.IsHeader || e.Todo.ID != td.ID {
+		t.Fatalf("unexpected selected entry: %#v", e)
 	}
 }

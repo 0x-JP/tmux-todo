@@ -26,14 +26,33 @@ bind_full="$(tmux show-option -gqv @tmux-todo-bind-full)"
 bind_peek="$(tmux show-option -gqv @tmux-todo-bind-peek)"
 bind_quick="$(tmux show-option -gqv @tmux-todo-bind-quick)"
 
+bind_with_warning() {
+  local table="$1"
+  local key="$2"
+  local popup_mode="$3"
+  local no_prefix="${4:-0}"
+  [ -z "$key" ] && return 0
+
+  local existing
+  existing="$(tmux list-keys -T "$table" 2>/dev/null | awk -v t="$table" -v k="$key" '$0 ~ (" -T " t " " k " ") {print; exit}')"
+  if [ -n "$existing" ] && [[ "$existing" != *"tmux-todo/scripts/popup.sh"* ]]; then
+    tmux display-message "tmux-todo: key conflict on $key in table $table (overriding existing binding)"
+  fi
+  if [ "$no_prefix" = "1" ]; then
+    tmux bind-key -n "$key" run-shell "$CURRENT_DIR/scripts/popup.sh $popup_mode '#{pane_current_path}'"
+  else
+    tmux bind-key "$key" run-shell "$CURRENT_DIR/scripts/popup.sh $popup_mode '#{pane_current_path}'"
+  fi
+}
+
 if [ -n "$bind_full" ]; then
-  tmux bind-key "$bind_full" run-shell "$CURRENT_DIR/scripts/popup.sh full '#{pane_current_path}'"
+  bind_with_warning "prefix" "$bind_full" "full" "0"
 fi
 if [ -n "$bind_peek" ]; then
-  tmux bind-key "$bind_peek" run-shell "$CURRENT_DIR/scripts/popup.sh peek '#{pane_current_path}'"
+  bind_with_warning "prefix" "$bind_peek" "peek" "0"
 fi
 if [ -n "$bind_quick" ]; then
-  tmux bind-key -n "$bind_quick" run-shell "$CURRENT_DIR/scripts/popup.sh quick '#{pane_current_path}'"
+  bind_with_warning "root" "$bind_quick" "quick" "1"
 fi
 
 focus_alert="$(tmux show-option -gqv @tmux-todo-focus-alert)"

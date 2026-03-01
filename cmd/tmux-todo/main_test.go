@@ -97,6 +97,52 @@ func TestCLIJSONFlows(t *testing.T) {
 	if _, ok := hh["has_high"]; !ok {
 		t.Fatalf("missing has_high in output: %#v", hh)
 	}
+
+	out, err = captureStdout(func() error {
+		return runSummary(st, ctx, []string{"--json"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var summary map[string]any
+	if err := json.Unmarshal([]byte(out), &summary); err != nil {
+		t.Fatal(err)
+	}
+	if summary["action"] != "summary" {
+		t.Fatalf("unexpected summary action: %#v", summary["action"])
+	}
+
+	exportPath := filepath.Join(dir, "export.json")
+	out, err = captureStdout(func() error {
+		return runExport(st, cfg, ctx, []string{"--out", exportPath, "--json"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var exportRes map[string]any
+	if err := json.Unmarshal([]byte(out), &exportRes); err != nil {
+		t.Fatal(err)
+	}
+	if exportRes["action"] != "export" {
+		t.Fatalf("unexpected export action: %#v", exportRes["action"])
+	}
+	if _, err := os.Stat(exportPath); err != nil {
+		t.Fatalf("expected export file: %v", err)
+	}
+
+	out, err = captureStdout(func() error {
+		return runDoctor(st, cfg, ctx, filepath.Join(dir, "todos.json"), filepath.Join(dir, "config.json"), []string{"--json"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doctor map[string]any
+	if err := json.Unmarshal([]byte(out), &doctor); err != nil {
+		t.Fatal(err)
+	}
+	if doctor["action"] != "doctor" {
+		t.Fatalf("unexpected doctor action: %#v", doctor["action"])
+	}
 }
 
 func captureStdout(fn func() error) (string, error) {

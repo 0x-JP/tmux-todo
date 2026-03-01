@@ -72,6 +72,7 @@ func (m QuickAddModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			_, err = m.store.AddWithParams(spec.Scope, spec.ContextKey, store.AddParams{
 				Text:     spec.Text,
 				Priority: spec.Priority,
+				Tags:     spec.Tags,
 			})
 			if err != nil {
 				m.status = err.Error()
@@ -99,6 +100,7 @@ func (m QuickAddModel) View() string {
 		"󰋗 default: task goes to current context",
 		"󰆓 global: `global | write release notes`",
 		"󰄬 priority: `task | p=1` (high), `p=2` (med), `p=3` (low)",
+		"󰓹 tags: `task | t=blocked,review`",
 	}
 	b.WriteString(quickHelpBox.Render(quickHintStyle.Render(strings.Join(hints, "\n"))))
 	b.WriteString("\n\n")

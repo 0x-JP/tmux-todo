@@ -135,6 +135,8 @@ bind-key C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane
 - `/` open filter input (`p:high tag:blocked`)
 - `a` quick add (text-only)
 - `A` guided add
+- `[` previous context
+- `]` next context
 - `c` add child task
 - `e` edit selected task
 - `g` task tag picker for selected task (inline)
@@ -164,6 +166,9 @@ Input grammar:
 - `task 1 | p=1` -> add high-priority in current context
 - `task 1 | p=high` -> same as above
 - `global | task 1 | p=2` -> add Global medium-priority task
+- `task 1 | t=blocked,review` -> add tags inline
+
+The full TUI now restores your last main view and selected task on reopen.
 
 ## CLI Reference
 
@@ -207,6 +212,9 @@ tmux-todo get --scope global --id <TODO_ID>
 tmux-todo context-key
 tmux-todo has-high
 tmux-todo has-high --context-only
+tmux-todo summary --json
+tmux-todo doctor --json
+tmux-todo export --out ~/tmux-todo-export.json --json
 ```
 
 ### Tag Registry (Per User)

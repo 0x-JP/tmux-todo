@@ -29,6 +29,9 @@ Commands:
   move                      move todo subtree across scopes/contexts
   reparent                  change parent id
   has-high                  detect open high-priority tasks
+  summary                   print context/global summary counters
+  doctor                    validate paths and local setup
+  export                    export data/config snapshot
   context-key               print current context key
   tags list|add|remove      manage per-user tag registry
   help                      show this help

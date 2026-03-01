@@ -13,6 +13,16 @@ import (
 type Data struct {
 	Version int      `json:"version"`
 	Tags    []string `json:"tags"`
+	UI      UIState  `json:"ui,omitempty"`
+}
+
+type UIState struct {
+	MainMode string `json:"main_mode,omitempty"`
+	Selected struct {
+		Scope      string `json:"scope,omitempty"`
+		ContextKey string `json:"context_key,omitempty"`
+		ID         string `json:"id,omitempty"`
+	} `json:"selected,omitempty"`
 }
 
 type Store struct {
@@ -33,6 +43,19 @@ func (s *Store) Tags() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return append([]string(nil), s.data.Tags...)
+}
+
+func (s *Store) UI() UIState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.UI
+}
+
+func (s *Store) SaveUI(ui UIState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data.UI = ui
+	return s.saveLocked()
 }
 
 func (s *Store) AddTag(tag string) error {
@@ -75,7 +98,7 @@ func (s *Store) load(defaultTags []string) error {
 	b, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			s.data = Data{Version: 1, Tags: normalizeAll(defaultTags)}
+			s.data = Data{Version: 2, Tags: normalizeAll(defaultTags)}
 			return s.saveLocked()
 		}
 		return err
@@ -86,6 +109,9 @@ func (s *Store) load(defaultTags []string) error {
 	}
 	if d.Version == 0 {
 		d.Version = 1
+	}
+	if d.Version < 2 {
+		d.Version = 2
 	}
 	if len(d.Tags) == 0 {
 		d.Tags = normalizeAll(defaultTags)

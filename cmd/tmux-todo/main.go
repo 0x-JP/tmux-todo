@@ -136,6 +136,18 @@ func main() {
 		if err := runHasHigh(st, ctx, args[1:]); err != nil {
 			fatal(err)
 		}
+	case "summary":
+		if err := runSummary(st, ctx, args[1:]); err != nil {
+			fatal(err)
+		}
+	case "doctor":
+		if err := runDoctor(st, cfg, ctx, dataPath, cfgPath, args[1:]); err != nil {
+			fatal(err)
+		}
+	case "export":
+		if err := runExport(st, cfg, ctx, args[1:]); err != nil {
+			fatal(err)
+		}
 	case "tags":
 		if err := runTags(st, cfg, args[1:]); err != nil {
 			fatal(err)

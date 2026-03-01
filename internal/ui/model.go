@@ -111,7 +111,7 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 	filterIn.CharLimit = 100
 	filterIn.Width = 60
 
-	return MainModel{
+	m := MainModel{
 		store:       st,
 		cfg:         cfg,
 		ctx:         ctx,
@@ -128,6 +128,8 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 			return ""
 		}(),
 	}
+	m.restoreUIState()
+	return m
 }
 
 func (m MainModel) Init() tea.Cmd { return nil }
@@ -293,6 +295,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.String() {
 		case "q", "ctrl+c":
+			m.persistUIState()
 			return m, tea.Quit
 		case "?":
 			m.showHelp = true
@@ -305,6 +308,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "tab":
 			m.mode = (m.mode + 1) % 3
 			m.cursor = 0
+			return m, nil
+		case "[":
+			m.shiftContext(-1)
+			return m, nil
+		case "]":
+			m.shiftContext(1)
 			return m, nil
 		case "up", "k":
 			if m.cursor > 0 {
@@ -722,6 +731,58 @@ func (m *MainModel) setStatus(s string, isErr bool) {
 	m.statusIsErr = isErr
 }
 
+func (m *MainModel) persistUIState() {
+	if m.cfg == nil {
+		return
+	}
+	ui := config.UIState{
+		MainMode: map[viewMode]string{
+			viewContext:     "context",
+			viewGeneral:     "global",
+			viewAllContexts: "all",
+		}[m.mode],
+	}
+	if e := m.currentEntry(); e != nil && !e.IsHeader {
+		ui.Selected.Scope = string(e.Scope)
+		ui.Selected.ContextKey = e.CtxKey
+		ui.Selected.ID = e.Todo.ID
+	}
+	_ = m.cfg.SaveUI(ui)
+}
+
+func (m *MainModel) restoreUIState() {
+	if m.cfg == nil {
+		return
+	}
+	ui := m.cfg.UI()
+	switch strings.ToLower(ui.MainMode) {
+	case "context":
+		m.mode = viewContext
+	case "global":
+		m.mode = viewGeneral
+	case "all":
+		m.mode = viewAllContexts
+	}
+	if ui.Selected.Scope == string(store.ScopeContext) && ui.Selected.ContextKey != "" {
+		_ = m.setContextByKey(ui.Selected.ContextKey)
+	}
+	if ui.Selected.ID == "" {
+		return
+	}
+	entries := m.currentEntries(false)
+	for i, e := range entries {
+		if e.IsHeader {
+			continue
+		}
+		if e.Scope == store.Scope(ui.Selected.Scope) &&
+			e.CtxKey == ui.Selected.ContextKey &&
+			e.Todo.ID == ui.Selected.ID {
+			m.cursor = i
+			return
+		}
+	}
+}
+
 func (m *MainModel) cancelAdd() {
 	m.adding = false
 	m.editing = false
@@ -865,6 +926,91 @@ func (m MainModel) allContextEntries(openOnly bool) []listEntry {
 		}
 	}
 	return out
+}
+
+func (m *MainModel) shiftContext(delta int) {
+	if !m.ctx.IsGit() {
+		return
+	}
+	keys := m.contextKeys()
+	if len(keys) == 0 {
+		return
+	}
+	cur := m.ctx.Key()
+	idx := 0
+	for i, k := range keys {
+		if k == cur {
+			idx = i
+			break
+		}
+	}
+	next := (idx + delta + len(keys)) % len(keys)
+	if keys[next] == cur {
+		return
+	}
+	if !m.setContextByKey(keys[next]) {
+		return
+	}
+	m.mode = viewContext
+	m.cursor = 0
+	m.setStatus("context: "+m.ctx.Label(), false)
+}
+
+func (m MainModel) contextKeys() []string {
+	d := m.store.Snapshot()
+	set := map[string]struct{}{}
+	if m.ctx.IsGit() {
+		set[m.ctx.Key()] = struct{}{}
+	}
+	for k := range d.Contexts {
+		if k != "" && k != "global" {
+			set[k] = struct{}{}
+		}
+	}
+	for k := range d.Meta {
+		if k != "" && k != "global" {
+			set[k] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (m *MainModel) setContextByKey(key string) bool {
+	if key == "" || key == "global" {
+		return false
+	}
+	d := m.store.Snapshot()
+	if meta, ok := d.Meta[key]; ok {
+		m.ctx = gitctx.Context{
+			RepoRoot:     meta.RepoRoot,
+			WorktreeRoot: meta.WorktreeRoot,
+			Branch:       meta.Branch,
+		}
+		return true
+	}
+	parts := strings.Split(key, "|")
+	kv := map[string]string{}
+	for _, p := range parts {
+		k, v, ok := strings.Cut(p, "=")
+		if !ok {
+			continue
+		}
+		kv[k] = v
+	}
+	if kv["repo"] == "" || kv["wt"] == "" || kv["br"] == "" {
+		return false
+	}
+	m.ctx = gitctx.Context{
+		RepoRoot:     kv["repo"],
+		WorktreeRoot: kv["wt"],
+		Branch:       kv["br"],
+	}
+	return true
 }
 
 func (m MainModel) defaultAddTarget() (store.Scope, string) {

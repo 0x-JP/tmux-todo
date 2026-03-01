@@ -12,6 +12,7 @@ type Spec struct {
 	ContextKey string
 	Text       string
 	Priority   store.Priority
+	Tags       []string
 }
 
 func Parse(input, defaultContextKey string) (Spec, error) {
@@ -49,8 +50,10 @@ func Parse(input, defaultContextKey string) (Spec, error) {
 					return Spec{}, err
 				}
 				spec.Priority = p
+			case "t", "tag", "tags":
+				spec.Tags = store.NormalizeTags([]string{value})
 			default:
-				return Spec{}, fmt.Errorf("unknown option %q (supported: p=high|med|low or p=1|2|3)", key)
+				return Spec{}, fmt.Errorf("unknown option %q (supported: p=high|med|low or p=1|2|3, t=tag1,tag2)", key)
 			}
 			continue
 		}

@@ -1,6 +1,7 @@
 package quickadd
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jp/tmux-todo/internal/store"
@@ -62,6 +63,27 @@ func TestParse(t *testing.T) {
 				Priority:   store.PriorityMed,
 			},
 		},
+		{
+			name:  "tags",
+			input: "task 3 | t=blocked,review",
+			want: Spec{
+				Scope:      store.ScopeContext,
+				ContextKey: ctx,
+				Text:       "task 3",
+				Tags:       []string{"blocked", "review"},
+			},
+		},
+		{
+			name:  "tags alias and priority",
+			input: "global | task 4 | tag=blocked | p=1",
+			want: Spec{
+				Scope:      store.ScopeGlobal,
+				ContextKey: "",
+				Text:       "task 4",
+				Priority:   store.PriorityHigh,
+				Tags:       []string{"blocked"},
+			},
+		},
 		{name: "missing text", input: "global | p=1", wantErr: true},
 		{name: "bad option", input: "task 1 | x=1", wantErr: true},
 		{name: "bad priority", input: "task 1 | p=9", wantErr: true},
@@ -84,7 +106,8 @@ func TestParse(t *testing.T) {
 			if got.Scope != tc.want.Scope ||
 				got.ContextKey != tc.want.ContextKey ||
 				got.Text != tc.want.Text ||
-				got.Priority != tc.want.Priority {
+				got.Priority != tc.want.Priority ||
+				strings.Join(got.Tags, ",") != strings.Join(tc.want.Tags, ",") {
 				t.Fatalf("got %+v, want %+v", got, tc.want)
 			}
 		})
