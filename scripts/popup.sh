@@ -4,6 +4,29 @@ set -euo pipefail
 
 mode="${1:-full}"
 cwd="${2:-$PWD}"
+while :; do
+  case "$cwd" in
+    \"*\")
+      cwd="${cwd#\"}"
+      cwd="${cwd%\"}"
+      ;;
+    \\\"*\\\")
+      cwd="${cwd#\\\"}"
+      cwd="${cwd%\\\"}"
+      ;;
+    \'*\')
+      cwd="${cwd#\'}"
+      cwd="${cwd%\'}"
+      ;;
+    \\\'*\\\')
+      cwd="${cwd#\\\'}"
+      cwd="${cwd%\\\'}"
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 bin="$(tmux show-option -gqv @tmux-todo-bin)"
 if [ -z "$bin" ]; then

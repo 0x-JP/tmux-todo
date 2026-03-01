@@ -18,6 +18,7 @@ type QuickAddModel struct {
 	ctx   gitctx.Context
 
 	input       textinput.Model
+	height      int
 	status      string
 	statusIsErr bool
 }
@@ -48,6 +49,7 @@ func (m QuickAddModel) Init() tea.Cmd { return textinput.Blink }
 func (m QuickAddModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		m.height = msg.Height
 		w := msg.Width - 6
 		if w < 24 {
 			w = 24
@@ -90,20 +92,29 @@ func (m QuickAddModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m QuickAddModel) View() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("󱑢 tmux-todo"))
+	b.WriteString(" ")
+	b.WriteString(headerStyle.Render("󰛄 Add Task"))
 	b.WriteString("\n")
-	b.WriteString(headerStyle.Render("󰛄  Add Task"))
+	b.WriteString(subtleStyle.Render("󰉋 "))
+	b.WriteString(contextStyle.Render(quickContextLabel(m.ctx)))
 	b.WriteString("\n")
-	b.WriteString(subtleStyle.Render("󰉋 context: "))
-	b.WriteString(contextStyle.Render(m.ctx.Label()))
-	b.WriteString("\n")
-	hints := []string{
-		"󰋗 default: task goes to current context",
-		"󰆓 global: `global | write release notes`",
-		"󰄬 priority: `task | p=1` (high), `p=2` (med), `p=3` (low)",
-		"󰓹 tags: `task | t=blocked,review`",
+	if m.height <= 0 || m.height >= 12 {
+		hints := []string{
+			"󰋗 default -> `task name`",
+			"󰆓 overrides -> `global | task name`",
+			"󰄬 overrides -> `task | p=1|2|3` (high|med|low)",
+			"󰓹 overrides -> `task | t=blocked,review`",
+		}
+		if m.height > 0 && m.height < 15 {
+			hints = hints[:2]
+		}
+		b.WriteString(quickHelpBox.Render(quickHintStyle.Render(strings.Join(hints, "\n"))))
+		b.WriteString("\n")
+	} else {
+		b.WriteString(quickHintStyle.Render("default -> `task name`  |  overrides -> `global | task | p=1 | t=blocked,review`"))
+		b.WriteString("\n")
 	}
-	b.WriteString(quickHelpBox.Render(quickHintStyle.Render(strings.Join(hints, "\n"))))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 	b.WriteString(m.input.View())
 	if m.status != "" {
 		b.WriteString("\n")
@@ -129,4 +140,11 @@ func normalizeQuickSpecForContext(ctx gitctx.Context, spec quickadd.Spec) quicka
 		spec.ContextKey = ""
 	}
 	return spec
+}
+
+func quickContextLabel(ctx gitctx.Context) string {
+	if !ctx.IsGit() {
+		return "Context: Global"
+	}
+	return "Context: " + ctx.Label()
 }
