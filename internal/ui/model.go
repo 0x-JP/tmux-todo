@@ -16,10 +16,14 @@ import (
 )
 
 var (
-	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
-	headerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	statusErr     = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	donePeekStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("81"))
+	headerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("114"))
+	subtleStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	contextStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("81"))
+	warnStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("220"))
+	statusErr     = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
+	statusOK      = lipgloss.NewStyle().Foreground(lipgloss.Color("78"))
+	donePeekStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 )
 
 type listEntry struct {
@@ -79,14 +83,14 @@ type MainModel struct {
 
 func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike bool) MainModel {
 	scope := store.ScopeContext
-	if ctx.WorktreeRoot == "" {
+	if !ctx.IsGit() {
 		scope = store.ScopeGlobal
 	}
 	mode := viewContext
 	if scope == store.ScopeGlobal {
 		mode = viewGeneral
 	}
-	if ctx.WorktreeRoot != "" {
+	if ctx.IsGit() {
 		_ = st.SetContextMeta(ctx.Key(), store.MetaInfo{
 			RepoRoot:     ctx.RepoRoot,
 			WorktreeRoot: ctx.WorktreeRoot,
@@ -117,7 +121,12 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 		tagInput:    tagIn,
 		filterInput: filterIn,
 		addScope:    scope,
-		addCtxKey:   ctx.Key(),
+		addCtxKey: func() string {
+			if ctx.IsGit() {
+				return ctx.Key()
+			}
+			return ""
+		}(),
 	}
 }
 
@@ -260,51 +269,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				m.finishAdd()
-				return m, nil
-			case "tab":
-				if m.editing {
-					return m, nil
-				}
-				if m.addScope == store.ScopeContext {
-					m.addScope = store.ScopeGlobal
-				} else {
-					m.addScope = store.ScopeContext
-					m.addCtxKey = m.ctx.Key()
-				}
-				if m.addScope == store.ScopeGlobal {
-					m.addParent = ""
-					m.addParentLabel = ""
-					m.addCtxKey = ""
-				}
-				return m, nil
-			case "g":
-				m.guidedAdd = true
-				m.tagPicker = true
-				m.tagCursor = 0
-				return m, nil
-			case "1":
-				m.guidedAdd = true
-				m.addPriority = store.PriorityHigh
-				return m, nil
-			case "2":
-				m.guidedAdd = true
-				m.addPriority = store.PriorityMed
-				return m, nil
-			case "3":
-				m.guidedAdd = true
-				m.addPriority = store.PriorityLow
-				return m, nil
-			case "0", "!":
-				m.guidedAdd = true
-				m.addPriority = ""
-				return m, nil
-			case "b":
-				m.guidedAdd = true
-				m.addTags = toggleTag(m.addTags, "blocked")
-				return m, nil
-			case "r":
-				m.guidedAdd = true
-				m.addTags = toggleTag(m.addTags, "review")
 				return m, nil
 			}
 			var cmd tea.Cmd
@@ -523,9 +487,10 @@ func (m MainModel) View() string {
 	} else if m.mode == viewAllContexts {
 		scopeLabel = "All Contexts"
 	}
-	b.WriteString(titleStyle.Render("tmux-todo"))
+	b.WriteString(titleStyle.Render("󱑢 tmux-todo"))
 	b.WriteString("\n")
-	b.WriteString(headerStyle.Render(fmt.Sprintf("Scope: %s | Current: %s", scopeLabel, m.ctx.Label())))
+	b.WriteString(headerStyle.Render("Scope: " + scopeLabel + " | Current: "))
+	b.WriteString(contextStyle.Render(m.ctx.Label()))
 	b.WriteString("\n")
 	b.WriteString(headerStyle.Render(m.summaryLine()))
 	if m.filterTag != "" || m.filterPriority != "" {
@@ -544,7 +509,11 @@ func (m MainModel) View() string {
 				if i == m.cursor {
 					line = "> " + e.Header
 				}
-				b.WriteString(headerStyle.Render(line))
+				if e.Scope == store.ScopeContext {
+					b.WriteString(contextStyle.Render(line))
+				} else {
+					b.WriteString(headerStyle.Render(line))
+				}
 				b.WriteString("\n")
 				continue
 			}
@@ -552,9 +521,9 @@ func (m MainModel) View() string {
 			if i == m.cursor {
 				prefix = "> "
 			}
-			mark := "- [ ]"
+			mark := "󰄱"
 			if e.Todo.Done {
-				mark = "- [x]"
+				mark = "󰄲"
 			}
 			indent := strings.Repeat("  ", e.Depth)
 			text := e.Todo.Text
@@ -586,36 +555,20 @@ func (m MainModel) View() string {
 			modeLabel = "Edit mode"
 		}
 		b.WriteString(headerStyle.Render(modeLabel))
-		b.WriteString(" (tab switches target, enter saves, esc cancels)\n")
+		b.WriteString(" (enter saves, esc cancels)\n")
 		b.WriteString(fmt.Sprintf("Target: %s | Parent: %s\n", target, parent))
 		if m.guidedAdd {
-			b.WriteString(fmt.Sprintf("Priority: %s (1=high 2=med 3=low, 0 clears)\n", displayPriority(m.addPriority)))
-			b.WriteString(fmt.Sprintf("Tags: %s (b/r toggle defaults, g tag picker)\n", displayTags(m.addTags)))
-			if m.tagPicker {
-				b.WriteString("Tag picker (space toggle, n new, enter/esc close)\n")
-				for i, tg := range m.knownTags() {
-					prefix := "  "
-					if i == m.tagCursor {
-						prefix = "> "
-					}
-					mark := "[ ]"
-					if hasTag(m.addTags, tg) {
-						mark = "[x]"
-					}
-					b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
-				}
-				if m.newTagInput {
-					b.WriteString(m.tagInput.View() + "\n")
-				}
-			}
+			b.WriteString(fmt.Sprintf("Priority preset: %s\n", displayPriority(m.addPriority)))
+			b.WriteString(fmt.Sprintf("Tags preset: %s\n", displayTags(m.addTags)))
 		} else {
 			b.WriteString("Use A for guided add mode\n")
 		}
 		b.WriteString(m.input.View())
 		b.WriteString("\n")
 	} else {
-		b.WriteString("Keys: ? help | tab scope | / filter | a quick-add | A guided-add | c add-child | e edit\n")
-		b.WriteString("      1/2/3/! priority(high/med/low/clear) | b/r tags | space toggle | d delete | j/k move | q quit\n")
+		b.WriteString(subtleStyle.Render("Keys: ? help | tab scope | / filter | a quick-add | A guided-add | c add-child | e edit"))
+		b.WriteString("\n")
+		b.WriteString(subtleStyle.Render("      1/2/3/! priority(high/med/low/clear) | b/r tags | space toggle | d delete | j/k move | q quit"))
 		if m.tagPicker && m.tagPickerMode == "task" {
 			b.WriteString("\n")
 			b.WriteString(headerStyle.Render("Task Tag Picker"))
@@ -631,9 +584,9 @@ func (m MainModel) View() string {
 				if i == m.tagCursor {
 					prefix = "> "
 				}
-				mark := "[ ]"
+				mark := "󰄱"
 				if t != nil && hasTag(t.Tags, tg) {
-					mark = "[x]"
+					mark = "󰄲"
 				}
 				b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
 			}
@@ -650,7 +603,7 @@ func (m MainModel) View() string {
 		if m.statusIsErr {
 			b.WriteString(statusErr.Render("Status: " + m.status))
 		} else {
-			b.WriteString("Status: " + m.status)
+			b.WriteString(statusOK.Render("Status: " + m.status))
 		}
 		b.WriteString("\n")
 	}
@@ -664,7 +617,7 @@ func (m MainModel) tagPickerView() string {
 	if m.tagPickerMode == "manage" {
 		title = "Tag Manager"
 	}
-	b.WriteString(titleStyle.Render("tmux-todo " + title))
+	b.WriteString(titleStyle.Render("󰝗 tmux-todo " + title))
 	b.WriteString("\n")
 
 	if m.tagPickerMode == "task" {
@@ -691,11 +644,11 @@ func (m MainModel) tagPickerView() string {
 			if i == m.tagCursor {
 				prefix = "> "
 			}
-			mark := "[ ]"
+			mark := "󰄱"
 			if m.tagPickerMode == "task" {
 				t := m.lookupTodo(m.tagPickScope, m.tagPickCtx, m.tagPickID)
 				if t != nil && hasTag(t.Tags, tg) {
-					mark = "[x]"
+					mark = "󰄲"
 				}
 			}
 			b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
@@ -822,9 +775,12 @@ func (m MainModel) helpView() string {
 	b.WriteString("  b toggle blocked tag | r toggle review tag\n")
 	b.WriteString("\n")
 	b.WriteString("Guided mode:\n")
-	b.WriteString("  enter save | esc cancel | tab switch target\n")
-	b.WriteString("  g open tag picker, then space toggle, n add new, esc close picker\n")
-	b.WriteString("  G manage tags globally, d removes selected tag everywhere\n")
+	b.WriteString("  enter save | esc cancel\n")
+	b.WriteString("  while typing, all key commands are disabled\n")
+	b.WriteString("\n")
+	b.WriteString("Tag management:\n")
+	b.WriteString("  g task tag picker (selection mode)\n")
+	b.WriteString("  G global tag manager, d removes selected tag everywhere\n")
 	b.WriteString("\n")
 	b.WriteString("Filter examples:\n")
 	b.WriteString("  p:high\n")
@@ -983,9 +939,9 @@ func (m PeekModel) View() string {
 		return m.viewHighAlert()
 	}
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Quick Todos"))
+	b.WriteString(titleStyle.Render("󰄬 Quick Todos"))
 	b.WriteString("\n")
-	b.WriteString(headerStyle.Render(m.ctx.Label()))
+	b.WriteString(contextStyle.Render(m.ctx.Label()))
 	b.WriteString("\n\n")
 
 	m.renderPeekSection(&b, "Open", m.peekOpen(store.ScopeContext), 4, false)
@@ -1000,10 +956,13 @@ func (m PeekModel) View() string {
 
 func (m PeekModel) viewHighAlert() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("High priority task in this context"))
+	msg := "  High priority items in " + m.ctx.Label()
+	if m.width > 0 {
+		msg = wrapText(msg, m.width-4)
+	}
+	b.WriteString(warnStyle.Render(msg))
 	b.WriteString("\n")
-	b.WriteString(headerStyle.Render(m.ctx.Label()))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
 	entries := m.peekOpen(store.ScopeContext)
 	high := make([]listEntry, 0, len(entries))
@@ -1319,6 +1278,28 @@ func mergeTags(base, extra []string) []string {
 	all := append([]string(nil), base...)
 	all = append(all, extra...)
 	return store.NormalizeTags(all)
+}
+
+func wrapText(s string, max int) string {
+	if max <= 0 {
+		return s
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return s
+	}
+	lines := []string{}
+	cur := words[0]
+	for _, w := range words[1:] {
+		if len([]rune(cur))+1+len([]rune(w)) <= max {
+			cur += " " + w
+			continue
+		}
+		lines = append(lines, cur)
+		cur = w
+	}
+	lines = append(lines, cur)
+	return strings.Join(lines, "\n")
 }
 
 func (m *MainModel) applyTaskTagToggle(tag string, forceAdd bool) error {

@@ -3,10 +3,11 @@ package config
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/jp/tmux-todo/internal/fileio"
 )
 
 type Data struct {
@@ -95,14 +96,11 @@ func (s *Store) load(defaultTags []string) error {
 }
 
 func (s *Store) saveLocked() error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
-	}
 	b, err := json.MarshalIndent(s.data, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, b, 0o644)
+	return fileio.WriteFileAtomic(s.path, b, 0o644)
 }
 
 func normalize(v string) string {

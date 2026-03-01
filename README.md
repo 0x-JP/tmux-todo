@@ -88,6 +88,8 @@ set -g @tmux-todo-popup-width "80%"
 set -g @tmux-todo-popup-height "80%"
 set -g @tmux-todo-peek-width "34%"
 set -g @tmux-todo-peek-height "22%"
+set -g @tmux-todo-quick-width "46%"
+set -g @tmux-todo-quick-height "18%"
 set -g @tmux-todo-focus-width "24%"
 set -g @tmux-todo-focus-height "14%"
 
@@ -101,6 +103,7 @@ set -g @tmux-todo-focus-duration-ms "2000"
 # optional manual keybindings
 bind-key T run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh full '#{pane_current_path}'"
 bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_current_path}'"
+bind-key C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane_current_path}'"
 ```
 
 ## Plugin Options
@@ -110,6 +113,8 @@ bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_cu
 - `@tmux-todo-popup-height` default: `80%`
 - `@tmux-todo-peek-width` default: `34%`
 - `@tmux-todo-peek-height` default: `22%`
+- `@tmux-todo-quick-width` default: `46%`
+- `@tmux-todo-quick-height` default: `18%`
 - `@tmux-todo-focus-width` default: `32%`
 - `@tmux-todo-focus-height` default: `14%`
 - `@tmux-todo-strikethrough` default: `on`
@@ -121,6 +126,7 @@ bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_cu
 - `@tmux-todo-alert-duration-ms` default: `5000`
 - `@tmux-todo-bind-full` default: empty
 - `@tmux-todo-bind-peek` default: empty
+- `@tmux-todo-bind-quick` default: `C-t`
 
 ## TUI Keys
 
@@ -140,6 +146,24 @@ bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_cu
 - `d` delete selected task
 - `j/k` or arrows move cursor
 - `q` quit
+
+## Quick Add Popup (`Ctrl-t`)
+
+Use a tmux binding to open a small quick-add input popup:
+
+```tmux
+set -g @tmux-todo-bind-quick "C-t"
+```
+
+`@tmux-todo-bind-quick` is bound as a no-prefix key (`bind-key -n`), so pressing `Ctrl-t` directly opens quick add.
+
+Input grammar:
+
+- `task 1` -> add to current context
+- `global | task 1` -> add to Global context
+- `task 1 | p=1` -> add high-priority in current context
+- `task 1 | p=high` -> same as above
+- `global | task 1 | p=2` -> add Global medium-priority task
 
 ## CLI Reference
 

@@ -82,3 +82,16 @@ func TestDetectNotGit(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotGitRepo", err)
 	}
 }
+
+func TestContextKeyAndLabelForGlobal(t *testing.T) {
+	ctx := Context{Branch: "global"}
+	if ctx.IsGit() {
+		t.Fatal("expected non-git context")
+	}
+	if got := ctx.Key(); got != "global" {
+		t.Fatalf("key = %q, want global", got)
+	}
+	if got := ctx.Label(); got != "Global" {
+		t.Fatalf("label = %q, want Global", got)
+	}
+}

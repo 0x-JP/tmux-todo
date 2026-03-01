@@ -16,10 +16,20 @@ type Context struct {
 }
 
 func (c Context) Key() string {
+	if !c.IsGit() {
+		return "global"
+	}
 	return "repo=" + c.RepoRoot + "|wt=" + c.WorktreeRoot + "|br=" + c.Branch
 }
 
+func (c Context) IsGit() bool {
+	return c.RepoRoot != "" && c.WorktreeRoot != "" && c.Branch != "" && c.Branch != "no-git"
+}
+
 func (c Context) Label() string {
+	if !c.IsGit() {
+		return "Global"
+	}
 	if c.RepoRoot == "" {
 		return c.WorktreeRoot + " [" + c.Branch + "]"
 	}

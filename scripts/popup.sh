@@ -14,6 +14,8 @@ popup_width="$(tmux show-option -gqv @tmux-todo-popup-width)"
 popup_height="$(tmux show-option -gqv @tmux-todo-popup-height)"
 peek_width="$(tmux show-option -gqv @tmux-todo-peek-width)"
 peek_height="$(tmux show-option -gqv @tmux-todo-peek-height)"
+quick_width="$(tmux show-option -gqv @tmux-todo-quick-width)"
+quick_height="$(tmux show-option -gqv @tmux-todo-quick-height)"
 focus_width="$(tmux show-option -gqv @tmux-todo-focus-width)"
 focus_height="$(tmux show-option -gqv @tmux-todo-focus-height)"
 strike_opt="$(tmux show-option -gqv @tmux-todo-strikethrough)"
@@ -52,6 +54,17 @@ if [ "$mode" = "peek-alert" ]; then
     -x R \
     -y 1 \
     "'$bin_esc' --cwd '$cwd_esc' --peek-duration-ms=${focus_duration_ms:-2000} peek-high"
+  exit 0
+fi
+
+if [ "$mode" = "quick" ]; then
+  tmux display-popup \
+    -E \
+    -w "${quick_width:-46%}" \
+    -h "${quick_height:-18%}" \
+    -x C \
+    -y C \
+    "'$bin_esc' --cwd '$cwd_esc' quick"
   exit 0
 fi
 

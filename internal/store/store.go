@@ -7,11 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jp/tmux-todo/internal/fileio"
 )
 
 type Todo struct {
@@ -474,14 +475,11 @@ func (s *Store) load() error {
 }
 
 func (s *Store) saveLocked() error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
-	}
 	b, err := json.MarshalIndent(s.data, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, b, 0o644)
+	return fileio.WriteFileAtomic(s.path, b, 0o644)
 }
 
 func newID() (string, error) {
