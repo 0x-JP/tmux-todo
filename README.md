@@ -4,220 +4,161 @@ Context-aware tmux todo manager with:
 
 - Full popup manager (`tui`)
 - Compact peek popup (`peek`)
-- Focus alert popup for high-priority context tasks (`peek-high`)
-- Global + context-scoped tasks
-- Nested tasks
-- Priority + tags
+- Quick-add popup (`quick`)
+- Focus alert for high-priority context tasks (`peek-high`)
+- Global + context-scoped tasks (auto-detected from git repo/worktree/branch)
+- Nested tasks, priorities, and tags
 - AI-friendly CLI with JSON output
+
+Requires a [Nerd Font](https://www.nerdfonts.com/) for icon rendering.
 
 ## Install
 
 ### Prerequisites
 
-- tmux with popup support (`display-popup`, tmux 3.2+ recommended)
-- Go 1.22+
+- tmux 3.2+ (for `display-popup` support)
+- Go 1.22+ (to build the binary)
+- A Nerd Font patched terminal font
 
-Important:
+### 1. Install the binary
 
-- TPM installs/sources tmux plugin scripts.
-- TPM does **not** build or install the `tmux-todo` Go binary.
-- You must install the binary separately (choose one method below).
+TPM does **not** build the Go binary. Install it separately using one of these methods.
 
-### Build binary
+**Option A — `go install` (recommended)**
+
+```bash
+go install github.com/0x-JP/tmux-todo/cmd/tmux-todo@latest
+```
+
+**Option B — Build from source**
 
 ```bash
 cd /path/to/tmux-todo
 go build -o ~/.local/bin/tmux-todo ./cmd/tmux-todo
 ```
 
-Make sure `~/.local/bin` is on PATH for tmux sessions, or set `@tmux-todo-bin` explicitly in `.tmux.conf`.
+**Option C — Download a release binary**
 
-### Install binary with `go install` (recommended for users)
+When release assets are available, download the binary for your platform and place it on PATH (e.g. `~/.local/bin/tmux-todo`).
 
-```bash
-go install github.com/0x-JP/tmux-todo/cmd/tmux-todo@latest
-```
+Make sure the binary location is on PATH for tmux sessions, or set `@tmux-todo-bin` to the absolute path in `.tmux.conf`.
 
-If your `GOBIN`/`GOPATH/bin` is not on PATH in tmux, set `@tmux-todo-bin` to the absolute binary path.
+### 2. Install the plugin via TPM
 
-### Install from release binary (recommended for team rollout)
-
-When release assets are available, download the binary and place it on PATH (for example `~/.local/bin/tmux-todo`).
-
-### TPM install
-
-Add to `~/.tmux.conf`:
+Add to `~/.tmux.conf` (before the TPM loader):
 
 ```tmux
 set -g @plugin '0x-JP/tmux-todo'
 ```
 
-For local development with TPM:
-
-```bash
-mkdir -p ~/.tmux/plugins
-ln -sfn /path/to/tmux-todo ~/.tmux/plugins/tmux-todo
-```
-
-Then in `~/.tmux.conf`:
-
-```tmux
-set -g @plugin 'tmux-todo'
-```
-
-Keep TPM loader at bottom:
-
-```tmux
-run '~/.tmux/plugins/tpm/tpm'
-```
-
-Reload tmux:
+Then install with `prefix + I` inside tmux, or reload:
 
 ```bash
 tmux source-file ~/.tmux.conf
 ```
 
-## Minimal `.tmux.conf` Setup
+**Local development with TPM:**
 
-```tmux
-# binary location
-set -g @tmux-todo-bin "$HOME/.local/bin/tmux-todo"
-
-# optional popup sizing
-set -g @tmux-todo-popup-width "80%"
-set -g @tmux-todo-popup-height "80%"
-set -g @tmux-todo-peek-width "34%"
-set -g @tmux-todo-peek-height "22%"
-set -g @tmux-todo-quick-width "46%"
-set -g @tmux-todo-quick-height "18%"
-set -g @tmux-todo-focus-width "24%"
-set -g @tmux-todo-focus-height "14%"
-
-# focus alert behavior
-set -g @tmux-todo-focus-alert "on"
-set -g @tmux-todo-focus-on-context-switch "on"
-set -g @tmux-todo-focus-include-global "off"
-set -g @tmux-todo-focus-cooldown-sec "0"
-set -g @tmux-todo-focus-duration-ms "2000"
-
-# optional manual keybindings
-bind-key T run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh full '#{pane_current_path}'"
-bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_current_path}'"
-bind-key C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane_current_path}'"
+```bash
+ln -sfn /path/to/tmux-todo ~/.tmux/plugins/tmux-todo
 ```
 
-## Recommended Config (Current Working Profile)
+### macOS note
 
-This mirrors the setup used during development and dogfooding:
+macOS may set `com.apple.provenance` on cloned files, blocking script execution (exit code 126). Fix with:
+
+```bash
+sudo xattr -dr com.apple.provenance ~/.tmux/plugins/tmux-todo
+```
+
+Or build the binary locally (Option B above) to avoid the attribute entirely.
+
+## Configuration
+
+Add any of these to `~/.tmux.conf` **before** the TPM `run` line. Only set the options you want to change — all have sensible defaults.
 
 ```tmux
-# plugin
-set -g @plugin '0x-JP/tmux-todo'
-
-# binary
+# Binary location (default: "tmux-todo", found via PATH)
 set -g @tmux-todo-bin "$HOME/.local/bin/tmux-todo"
 
-# popup sizing
-set -g @tmux-todo-popup-width "80%"
-set -g @tmux-todo-popup-height "80%"
-set -g @tmux-todo-peek-width "45%"
-set -g @tmux-todo-peek-height "35%"
-set -g @tmux-todo-focus-width "24%"
-set -g @tmux-todo-focus-height "14%"
-set -g @tmux-todo-quick-width "46%"
-set -g @tmux-todo-quick-height "18%"
+# Popup sizing
+set -g @tmux-todo-popup-width "80%"     # default: 80%
+set -g @tmux-todo-popup-height "80%"    # default: 80%
+set -g @tmux-todo-peek-width "34%"      # default: 34%
+set -g @tmux-todo-peek-height "22%"     # default: 22%
+set -g @tmux-todo-quick-width "46%"     # default: 46%
+set -g @tmux-todo-quick-height "18%"    # default: 18%
+set -g @tmux-todo-focus-width "32%"     # default: 32%
+set -g @tmux-todo-focus-height "14%"    # default: 14%
 
-# rendering + timing
-set -g @tmux-todo-strikethrough "on"
-set -g @tmux-todo-alert-duration-ms "5000"
-set -g @tmux-todo-focus-duration-ms "2000"
+# Rendering
+set -g @tmux-todo-strikethrough "on"    # default: on
 
-# focus alert behavior
-set -g @tmux-todo-focus-alert "on"
-set -g @tmux-todo-focus-on-context-switch "on"
-set -g @tmux-todo-focus-include-global "off"
-set -g @tmux-todo-focus-cooldown-sec "0"
+# Focus alert (popup on pane switch when high-priority tasks exist)
+set -g @tmux-todo-focus-alert "on"              # default: off
+set -g @tmux-todo-focus-on-context-switch "on"  # default: on
+set -g @tmux-todo-focus-include-global "off"    # default: off
+set -g @tmux-todo-focus-cooldown-sec "0"        # default: 0
+set -g @tmux-todo-alert-duration-ms "5000"      # default: 5000
+set -g @tmux-todo-focus-duration-ms "2000"      # default: 2000
 
-# keybindings
-bind-key T run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh full '#{pane_current_path}'"
-bind-key t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_current_path}'"
+# Keybindings (empty = disabled)
+set -g @tmux-todo-bind-full ""          # default: "" (prefix key)
+set -g @tmux-todo-bind-peek ""          # default: "" (prefix key)
+set -g @tmux-todo-bind-quick "C-t"      # default: C-t (no-prefix key)
+
+# TPM loader (keep at bottom)
+run '~/.tmux/plugins/tpm/tpm'
+```
+
+You can also bind keys manually if you prefer:
+
+```tmux
+bind-key T   run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh full '#{pane_current_path}'"
+bind-key t   run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh peek '#{pane_current_path}'"
 bind-key -n C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{pane_current_path}'"
 ```
 
-For consistent paths across machines/sessions, you can also set:
-
-```tmux
-set-environment -g XDG_STATE_HOME "$HOME/.local/state"
-set-environment -g XDG_CONFIG_HOME "$HOME/.config"
-```
-
-## Plugin Options
-
-- `@tmux-todo-bin` default: `tmux-todo`
-- `@tmux-todo-popup-width` default: `80%`
-- `@tmux-todo-popup-height` default: `80%`
-- `@tmux-todo-peek-width` default: `34%`
-- `@tmux-todo-peek-height` default: `22%`
-- `@tmux-todo-quick-width` default: `46%`
-- `@tmux-todo-quick-height` default: `18%`
-- `@tmux-todo-focus-width` default: `32%`
-- `@tmux-todo-focus-height` default: `14%`
-- `@tmux-todo-strikethrough` default: `on`
-- `@tmux-todo-focus-alert` default: `off`
-- `@tmux-todo-focus-on-context-switch` default: `on`
-- `@tmux-todo-focus-include-global` default: `off`
-- `@tmux-todo-focus-cooldown-sec` default: `0`
-- `@tmux-todo-focus-duration-ms` default: `2000`
-- `@tmux-todo-alert-duration-ms` default: `5000`
-- `@tmux-todo-bind-full` default: empty
-- `@tmux-todo-bind-peek` default: empty
-- `@tmux-todo-bind-quick` default: `C-t`
-
 ## TUI Keys
 
-- `?` help overlay
-- `tab` cycle scope (context/global/all-contexts)
-- `/` open filter input (`p:high tag:blocked`)
-- `a` quick add (text-only)
-- `A` guided add
-- `[` previous context
-- `]` next context
-- `c` add child task
-- `e` edit selected task
-- `g` task tag picker for selected task (inline)
-- `G` global tag manager (full-page)
-- `1/2/3` set selected task priority (`1=high`, `2=med`, `3=low`)
-- `!` clear selected task priority
-- `b/r` toggle `blocked/review` on selected task
-- `space` toggle done
-- `d` delete selected task
-- `j/k` or arrows move cursor
-- `q` quit
+| Key | Action |
+|-----|--------|
+| `?` | Help overlay |
+| `tab` | Cycle scope (context / global / all-contexts) |
+| `/` | Filter input (`p:high tag:blocked`) |
+| `a` | Quick add (text-only) |
+| `A` | Guided add |
+| `c` | Add child task |
+| `e` | Edit selected task |
+| `g` | Tag picker for selected task |
+| `G` | Global tag manager |
+| `1` / `2` / `3` | Set priority (high / med / low) |
+| `!` | Clear priority |
+| `b` / `r` | Toggle blocked / review tag |
+| `space` | Toggle done |
+| `d` | Delete selected task |
+| `j` / `k` / arrows | Move cursor |
+| `[` / `]` | Previous / next context |
+| `q` | Quit |
 
-## Quick Add Popup (`Ctrl-t`)
+## Quick Add Popup
 
-Use a tmux binding to open a small quick-add input popup:
-
-```tmux
-set -g @tmux-todo-bind-quick "C-t"
-```
-
-`@tmux-todo-bind-quick` is bound as a no-prefix key (`bind-key -n`), so pressing `Ctrl-t` directly opens quick add.
+Default binding: `Ctrl-t` (no prefix required).
 
 Input grammar:
 
-- `task 1` -> add to current context
-- `global | task 1` -> add to Global context
-- `task 1 | p=1` -> add high-priority in current context
-- `task 1 | p=high` -> same as above
-- `global | task 1 | p=2` -> add Global medium-priority task
-- `task 1 | t=blocked,review` -> add tags inline
-
-The full TUI now restores your last main view and selected task on reopen.
+```
+task name                          -> add to current context
+global | task name                 -> add to Global context
+task name | p=1                    -> high priority (1=high, 2=med, 3=low)
+task name | p=high                 -> same as above
+task name | t=blocked,review       -> add tags inline
+global | task name | p=2 | t=review  -> combine all overrides
+```
 
 ## CLI Reference
 
-Tip: run `tmux-todo help` for built-in command help.
+Run `tmux-todo help` for built-in command help.
 
 ### Add
 
@@ -253,7 +194,6 @@ tmux-todo reparent --id <TODO_ID> --parent <PARENT_ID>
 
 ```bash
 tmux-todo get --id <TODO_ID>
-tmux-todo get --scope global --id <TODO_ID>
 tmux-todo context-key
 tmux-todo has-high
 tmux-todo has-high --context-only
@@ -265,7 +205,7 @@ tmux-todo clear-all --yes --json
 
 `clear-all` is destructive and requires `--yes`.
 
-### Tag Registry (Per User)
+### Tag Registry
 
 ```bash
 tmux-todo tags list
@@ -273,148 +213,84 @@ tmux-todo tags add review
 tmux-todo tags remove whatever --global-clean
 ```
 
-`tags remove --global-clean` removes the tag from:
+`tags remove --global-clean` removes the tag from the registry and all existing todos.
 
-- your local tag registry
-- all existing todos in local state
+### JSON Output
 
-### JSON Output (for Agents)
-
-Use `--json` on:
-
-- `add`, `list`, `get`, `done`, `undone`, `edit`, `delete`, `move`, `reparent`, `has-high`
-- `tags list`, `tags add`, `tags remove`
-
-Examples:
+Add `--json` to any command for machine-readable output:
 
 ```bash
 tmux-todo add --text "fix flaky test" --priority high --json
 tmux-todo list --scope all --all --json
-tmux-todo get --id <TODO_ID> --json
 tmux-todo done --id <TODO_ID> --json
 tmux-todo tags list --json
 ```
 
-## Claude Code Global Setup (Recommended)
+## Data and Config Paths
 
-For teams using Claude Code, keep this user-scoped file in `~/.claude/` so behavior is global across repos/sessions.
+**Todo data:**
 
-Create:
+1. `--data /custom/path.json` (CLI flag)
+2. `$XDG_STATE_HOME/tmux-todo/todos.json`
+3. `~/.local/state/tmux-todo/todos.json` (fallback)
 
-```bash
-mkdir -p ~/.claude
-cat > ~/.claude/CLAUDE.md <<'EOF'
+**User config (tag registry + UI state):**
+
+1. `$XDG_CONFIG_HOME/tmux-todo/config.json`
+2. `~/.config/tmux-todo/config.json` (fallback)
+
+For consistent paths across machines, you can set in `.tmux.conf`:
+
+```tmux
+set-environment -g XDG_STATE_HOME "$HOME/.local/state"
+set-environment -g XDG_CONFIG_HOME "$HOME/.config"
+```
+
+## Agent Integration (Claude Code / Codex)
+
+For AI agents that manage tasks via CLI, add to `~/.claude/CLAUDE.md`:
+
+```markdown
 When managing my tasks, use tmux-todo CLI (never edit todo files directly).
 
 Workflow:
-1. Detect current context:
-   - tmux-todo context-key
-2. Add tasks as work progresses:
-   - tmux-todo add --text "<task>" [--priority high|med|low] [--tag <tag>] --json
-3. Update status:
-   - tmux-todo done --id <id> --json
-   - tmux-todo undone --id <id> --json
-   - tmux-todo edit --id <id> ... --json
-4. Read context tasks during planning:
-   - tmux-todo list --scope context --json
-5. Prefer canonical tags:
-   - blocked, review
-   - tmux-todo tags list --json
+1. tmux-todo context-key                              # detect context
+2. tmux-todo add --text "<task>" --priority high --json  # add tasks
+3. tmux-todo done --id <id> --json                     # mark complete
+4. tmux-todo list --scope context --json               # read tasks
 
 Rules:
-- Do not modify repo-local CLAUDE.md for task logging.
-- Keep task updates in current context unless explicitly told otherwise.
 - Prefer --json for machine-readable operations.
-EOF
+- Keep task updates in current context unless told otherwise.
+- Use canonical tags: blocked, review
 ```
 
-Why this works with parallel sessions: each Claude Code session has its own cwd/worktree, and tmux-todo scopes tasks by that context automatically.
-
-## Optional: Codex User-Scoped Setup
-
-If you also use Codex globally, keep a parallel file and instruct Codex to follow it.
-
-```bash
-mkdir -p ~/.config/tmux-todo
-cat > ~/.config/tmux-todo/AGENT_TASKS.md <<'EOF'
-Use tmux-todo CLI for task management, scoped to current context.
-Prefer --json for all reads/writes.
-EOF
-```
-
-Practical agent examples:
-
-```bash
-# create task in current context
-tmux-todo add --text "Refactor parser edge-case handling" --priority high --tag review --json
-
-# list active context tasks
-tmux-todo list --scope context --json
-
-# finish a task
-tmux-todo done --id <TODO_ID> --json
-```
-
-## Data and Config Paths
-
-Todo data:
-
-- `$XDG_STATE_HOME/tmux-todo/todos.json`
-- fallback: `~/.local/state/tmux-todo/todos.json`
-
-User config (tag registry):
-
-- `$XDG_CONFIG_HOME/tmux-todo/config.json`
-- fallback: `~/.config/tmux-todo/config.json`
-
-Important:
-
-- `config.json` does **not** control where `todos.json` is stored.
-- `config.json` stores user settings (tags + UI state), not todo data path.
-
-You can override todo data path:
-
-```bash
-tmux-todo --data /path/to/todos.json tui
-```
-
-Path resolution priority for todo data:
-
-1. `--data /custom/path.json`
-2. `$XDG_STATE_HOME/tmux-todo/todos.json`
-3. `~/.local/state/tmux-todo/todos.json`
-
-tmux popup modes (`T`, `t`, `Ctrl-t`) use the environment of your tmux server.
-If you want a custom default location without passing `--data`, set `XDG_STATE_HOME`
-before starting tmux (or restart tmux server after changing it).
+Each session auto-scopes to its cwd/worktree, so parallel sessions work without conflict.
 
 ## Troubleshooting
 
+### Exit code 126 on macOS
+
+Scripts are blocked by Gatekeeper. See [macOS note](#macos-note) above.
+
 ### Focus alert does not appear
 
-1. Confirm option:
-```bash
-tmux show-option -gqv @tmux-todo-focus-alert
-```
-2. Confirm hook:
-```bash
-tmux show-hooks -g pane-focus-in
-```
-3. Confirm high-priority task exists:
-```bash
-tmux-todo has-high --context-only
-```
+1. Check the option is set:
+   ```bash
+   tmux show-option -gqv @tmux-todo-focus-alert   # should be "on"
+   ```
+2. Check the hook is registered:
+   ```bash
+   tmux show-hooks -g pane-focus-in
+   ```
+3. Confirm a high-priority task exists in the current context:
+   ```bash
+   tmux-todo has-high --context-only
+   ```
 
-### Popup too big/small
+### Popup too big or small
 
-Adjust:
-
-```tmux
-set -g @tmux-todo-focus-width "24%"
-set -g @tmux-todo-focus-height "14%"
-set -g @tmux-todo-peek-width "34%"
-set -g @tmux-todo-peek-height "22%"
-```
+Adjust the sizing options in your `.tmux.conf` — see [Configuration](#configuration).
 
 ## Development
 

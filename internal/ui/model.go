@@ -1043,7 +1043,7 @@ func (m MainModel) allContextEntries(openOnly bool) []listEntry {
 	for _, k := range keys {
 		label := k
 		if meta, ok := d.Meta[k]; ok {
-			label = fmt.Sprintf("%s/%s [%s]",
+			label = fmt.Sprintf("%s/%s \U000F062C %s",
 				baseOr(meta.RepoRoot, "repo"),
 				baseOr(meta.WorktreeRoot, "worktree"),
 				meta.Branch)
@@ -1255,7 +1255,7 @@ func (m PeekModel) viewHighAlert() string {
 		}
 		for _, e := range high {
 			indent := strings.Repeat("  ", e.Depth)
-			b.WriteString(fmt.Sprintf("  %s- [ ] %s\n", indent, e.Todo.Text))
+			b.WriteString(fmt.Sprintf("  %s󰄱 %s\n", indent, e.Todo.Text))
 		}
 	}
 	secs := int(m.closeAfter.Round(time.Second) / time.Second)
@@ -1320,9 +1320,9 @@ func (m PeekModel) renderPeekSection(b *strings.Builder, title string, entries [
 	}
 	for _, e := range entries {
 		indent := strings.Repeat("  ", e.Depth)
-		line := fmt.Sprintf("  %s- [ ] %s", indent, e.Todo.Text)
+		line := fmt.Sprintf("  %s󰄱 %s", indent, e.Todo.Text)
 		if done {
-			line = fmt.Sprintf("  %s- [x] %s", indent, maybeStrike(e.Todo.Text, m.strike))
+			line = fmt.Sprintf("  %s󰄲 %s", indent, maybeStrike(e.Todo.Text, m.strike))
 			line = donePeekStyle.Render(line)
 		}
 		b.WriteString(line)

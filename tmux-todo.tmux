@@ -2,25 +2,34 @@
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-tmux set-option -gq @tmux-todo-bin "tmux-todo"
-tmux set-option -gq @tmux-todo-popup-width "80%"
-tmux set-option -gq @tmux-todo-popup-height "80%"
-tmux set-option -gq @tmux-todo-peek-width "34%"
-tmux set-option -gq @tmux-todo-peek-height "22%"
-tmux set-option -gq @tmux-todo-quick-width "46%"
-tmux set-option -gq @tmux-todo-quick-height "18%"
-tmux set-option -gq @tmux-todo-focus-width "32%"
-tmux set-option -gq @tmux-todo-focus-height "14%"
-tmux set-option -gq @tmux-todo-strikethrough "on"
-tmux set-option -gq @tmux-todo-focus-alert "off"
-tmux set-option -gq @tmux-todo-focus-cooldown-sec "0"
-tmux set-option -gq @tmux-todo-alert-duration-ms "5000"
-tmux set-option -gq @tmux-todo-focus-duration-ms "2000"
-tmux set-option -gq @tmux-todo-focus-on-context-switch "on"
-tmux set-option -gq @tmux-todo-focus-include-global "off"
-tmux set-option -gq @tmux-todo-bind-full ""
-tmux set-option -gq @tmux-todo-bind-peek ""
-tmux set-option -gq @tmux-todo-bind-quick "C-t"
+# Set default value only if the user has not already configured it.
+tmux_default() {
+  local val
+  val="$(tmux show-option -gqv "$1")"
+  if [ -z "$val" ]; then
+    tmux set-option -gq "$1" "$2"
+  fi
+}
+
+tmux_default @tmux-todo-bin "tmux-todo"
+tmux_default @tmux-todo-popup-width "80%"
+tmux_default @tmux-todo-popup-height "80%"
+tmux_default @tmux-todo-peek-width "34%"
+tmux_default @tmux-todo-peek-height "22%"
+tmux_default @tmux-todo-quick-width "46%"
+tmux_default @tmux-todo-quick-height "18%"
+tmux_default @tmux-todo-focus-width "32%"
+tmux_default @tmux-todo-focus-height "14%"
+tmux_default @tmux-todo-strikethrough "on"
+tmux_default @tmux-todo-focus-alert "off"
+tmux_default @tmux-todo-focus-cooldown-sec "0"
+tmux_default @tmux-todo-alert-duration-ms "5000"
+tmux_default @tmux-todo-focus-duration-ms "2000"
+tmux_default @tmux-todo-focus-on-context-switch "on"
+tmux_default @tmux-todo-focus-include-global "off"
+tmux_default @tmux-todo-bind-full ""
+tmux_default @tmux-todo-bind-peek ""
+tmux_default @tmux-todo-bind-quick "C-t"
 
 bind_full="$(tmux show-option -gqv @tmux-todo-bind-full)"
 bind_peek="$(tmux show-option -gqv @tmux-todo-bind-peek)"
@@ -71,7 +80,7 @@ done <<EOF
 $existing_hooks
 EOF
 
-case "${focus_alert,,}" in
+case "$(printf "%s" "$focus_alert" | tr '[:upper:]' '[:lower:]')" in
   on|true|1|yes)
     hook_cmd="run-shell '$CURRENT_DIR/scripts/focus-alert.sh \"#{pane_current_path}\"'"
     tmux set-hook -ag pane-focus-in "$hook_cmd"

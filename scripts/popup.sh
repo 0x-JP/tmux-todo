@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+tolower() { printf "%s" "$1" | tr '[:upper:]' '[:lower:]'; }
+
 mode="${1:-full}"
 cwd="${2:-$PWD}"
 while :; do
@@ -45,7 +47,7 @@ strike_opt="$(tmux show-option -gqv @tmux-todo-strikethrough)"
 alert_duration_ms="$(tmux show-option -gqv @tmux-todo-alert-duration-ms)"
 focus_duration_ms="$(tmux show-option -gqv @tmux-todo-focus-duration-ms)"
 strike_flag="true"
-case "${strike_opt,,}" in
+case "$(tolower "$strike_opt")" in
   off|false|0|no)
     strike_flag="false"
     ;;

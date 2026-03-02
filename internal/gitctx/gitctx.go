@@ -31,11 +31,11 @@ func (c Context) Label() string {
 		return "Global"
 	}
 	if c.RepoRoot == "" {
-		return c.WorktreeRoot + " [" + c.Branch + "]"
+		return c.WorktreeRoot + " \U000F062C " + c.Branch
 	}
 	repo := filepath.Base(c.RepoRoot)
 	wt := filepath.Base(c.WorktreeRoot)
-	return repo + "/" + wt + " [" + c.Branch + "]"
+	return repo + "/" + wt + " \U000F062C " + c.Branch
 }
 
 type Runner interface {

@@ -2,9 +2,11 @@
 
 set -euo pipefail
 
+tolower() { printf "%s" "$1" | tr '[:upper:]' '[:lower:]'; }
+
 cwd="${1:-$PWD}"
 enabled="$(tmux show-option -gqv @tmux-todo-focus-alert)"
-case "${enabled,,}" in
+case "$(tolower "$enabled")" in
   on|true|1|yes) ;;
   *) exit 0 ;;
 esac
@@ -27,7 +29,8 @@ if [ -z "$safe_key" ]; then
   safe_key="default"
 fi
 
-if [ "${context_switch_only,,}" = "on" ] || [ "${context_switch_only,,}" = "true" ] || [ "${context_switch_only,,}" = "1" ] || [ "${context_switch_only,,}" = "yes" ]; then
+cso="$(tolower "$context_switch_only")"
+if [ "$cso" = "on" ] || [ "$cso" = "true" ] || [ "$cso" = "1" ] || [ "$cso" = "yes" ]; then
   state_file="/tmp/tmux-todo-last-context"
   previous=""
   if [ -f "$state_file" ]; then
@@ -39,7 +42,8 @@ if [ "${context_switch_only,,}" = "on" ] || [ "${context_switch_only,,}" = "true
   fi
 fi
 
-if [ "${include_global,,}" = "on" ] || [ "${include_global,,}" = "true" ] || [ "${include_global,,}" = "1" ] || [ "${include_global,,}" = "yes" ]; then
+ig="$(tolower "$include_global")"
+if [ "$ig" = "on" ] || [ "$ig" = "true" ] || [ "$ig" = "1" ] || [ "$ig" = "yes" ]; then
   if ! "$bin" --cwd "$cwd" has-high >/dev/null 2>&1; then
     exit 0
   fi
