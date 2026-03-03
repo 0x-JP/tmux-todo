@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jp/tmux-todo/internal/fileio"
+	"github.com/0x-JP/tmux-todo/internal/fileio"
 )
 
 type Todo struct {

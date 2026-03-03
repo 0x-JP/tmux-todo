@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jp/tmux-todo/internal/gitctx"
+	"github.com/0x-JP/tmux-todo/internal/gitctx"
 )
 
 func detectContext(cwd string) (gitctx.Context, error) {

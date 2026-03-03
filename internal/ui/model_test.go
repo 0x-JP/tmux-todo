@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jp/tmux-todo/internal/config"
-	"github.com/jp/tmux-todo/internal/gitctx"
-	"github.com/jp/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/config"
+	"github.com/0x-JP/tmux-todo/internal/gitctx"
+	"github.com/0x-JP/tmux-todo/internal/store"
 )
 
 func TestFlattenTodosScopeAndDepth(t *testing.T) {

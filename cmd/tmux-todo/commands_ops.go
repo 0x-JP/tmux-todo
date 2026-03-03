@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jp/tmux-todo/internal/config"
-	"github.com/jp/tmux-todo/internal/fileio"
-	"github.com/jp/tmux-todo/internal/gitctx"
-	"github.com/jp/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/config"
+	"github.com/0x-JP/tmux-todo/internal/fileio"
+	"github.com/0x-JP/tmux-todo/internal/gitctx"
+	"github.com/0x-JP/tmux-todo/internal/store"
 )
 
 func runSummary(st *store.Store, ctx gitctx.Context, args []string) error {

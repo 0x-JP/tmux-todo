@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jp/tmux-todo/internal/gitctx"
-	"github.com/jp/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/gitctx"
+	"github.com/0x-JP/tmux-todo/internal/store"
 )
 
 func runAdd(st *store.Store, ctx gitctx.Context, args []string) error {
