@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jp/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/store"
 )
 
 type cliEntry struct {

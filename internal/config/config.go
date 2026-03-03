@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jp/tmux-todo/internal/fileio"
+	"github.com/0x-JP/tmux-todo/internal/fileio"
 )
 
 type Data struct {

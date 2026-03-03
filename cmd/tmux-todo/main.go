@@ -9,9 +9,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/jp/tmux-todo/internal/config"
-	"github.com/jp/tmux-todo/internal/store"
-	"github.com/jp/tmux-todo/internal/ui"
+	"github.com/0x-JP/tmux-todo/internal/config"
+	"github.com/0x-JP/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/ui"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/jp/tmux-todo
+module github.com/0x-JP/tmux-todo
 
 go 1.23.0
 

@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/jp/tmux-todo/internal/gitctx"
-	"github.com/jp/tmux-todo/internal/quickadd"
-	"github.com/jp/tmux-todo/internal/store"
+	"github.com/0x-JP/tmux-todo/internal/gitctx"
+	"github.com/0x-JP/tmux-todo/internal/quickadd"
+	"github.com/0x-JP/tmux-todo/internal/store"
 )
 
 type QuickAddModel struct {
