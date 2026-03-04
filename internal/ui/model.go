@@ -82,8 +82,8 @@ type MainModel struct {
 	addCtxKey      string
 	addParent      string
 	addParentLabel string
-	pendingPri  store.Priority
-	pendingTags []string
+	priorityValue  store.Priority
+	tagsValue []string
 	editID         string
 	status         string
 	statusIsErr    bool
@@ -177,7 +177,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 						// tag added
 					default:
-						m.pendingTags = mergeTags(m.pendingTags, newTag)
+						m.tagsValue = mergeTags(m.tagsValue, newTag)
 						if m.cfg != nil {
 							_ = m.cfg.AddTag(newTag[0])
 						}
@@ -220,7 +220,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				case "manage":
 				default:
-					m.pendingTags = toggleTag(m.pendingTags, tag)
+					m.tagsValue = toggleTag(m.tagsValue, tag)
 				}
 				return m, nil
 			case "d":
@@ -250,13 +250,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "esc":
 					m.cancelAdd()
 				case "1":
-					m.pendingPri = store.PriorityHigh
+					m.priorityValue = store.PriorityHigh
 				case "2":
-					m.pendingPri = store.PriorityMed
+					m.priorityValue = store.PriorityMed
 				case "3":
-					m.pendingPri = store.PriorityLow
+					m.priorityValue = store.PriorityLow
 				case "0":
-					m.pendingPri = ""
+					m.priorityValue = ""
 				case "enter":
 					if err := m.saveAdd(); err != nil {
 						m.setStatus(err.Error(), true)
@@ -285,7 +285,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				case " ":
 					if len(tags) > 0 {
-						m.pendingTags = toggleTag(m.pendingTags, tags[m.tagCursor])
+						m.tagsValue = toggleTag(m.tagsValue, tags[m.tagCursor])
 					}
 				case "n":
 					m.newTagInput = true
@@ -381,8 +381,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
 			m.addParentLabel = ""
-			m.pendingPri = ""
-			m.pendingTags = nil
+			m.priorityValue = ""
+			m.tagsValue = nil
 			m.editID = ""
 			m.input.SetValue("")
 			m.input.Focus()
@@ -401,8 +401,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
 			m.addParentLabel = ""
-			m.pendingPri = t.Priority
-			m.pendingTags = append([]string(nil), t.Tags...)
+			m.priorityValue = t.Priority
+			m.tagsValue = append([]string(nil), t.Tags...)
 			if t != nil {
 				m.addParent = t.ID
 				m.addParentLabel = t.Text
@@ -424,8 +424,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editID = e.Todo.ID
 			m.addParent = e.Todo.ParentID
 			m.addParentLabel = ""
-			m.pendingPri = e.Todo.Priority
-			m.pendingTags = append([]string(nil), e.Todo.Tags...)
+			m.priorityValue = e.Todo.Priority
+			m.tagsValue = append([]string(nil), e.Todo.Tags...)
 			m.input.SetValue(e.Todo.Text)
 			m.input.Focus()
 			m.addMode = addText
@@ -587,13 +587,13 @@ func (m MainModel) View() string {
 		switch m.addMode {
 		case addPriority:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
-			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.pendingPri)))
+			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.priorityValue)))
 			b.WriteString(subtleStyle.Render("1 high  2 med  3 low  0 none  enter save  tab tags  esc cancel"))
 			b.WriteString("\n")
 		case addTags:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
-			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.pendingPri)))
-			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.pendingTags)))
+			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.priorityValue)))
+			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.tagsValue)))
 			tags := m.knownTags()
 			if len(tags) == 0 {
 				b.WriteString("(no tags)\n")
@@ -604,7 +604,7 @@ func (m MainModel) View() string {
 						prefix = "> "
 					}
 					mark := "o"
-					if hasTag(m.pendingTags, tg) {
+					if hasTag(m.tagsValue, tg) {
 						mark = "●"
 					}
 					b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
@@ -788,8 +788,8 @@ func (m *MainModel) saveAdd() error {
 	if m.editing {
 		up := store.UpdateParams{}
 		up.Text = &text
-		up.Priority = &m.pendingPri
-		tags := store.NormalizeTags(m.pendingTags)
+		up.Priority = &m.priorityValue
+		tags := store.NormalizeTags(m.tagsValue)
 		up.Tags = &tags
 		_, err := m.store.Update(m.addScope, m.addCtxKey, m.editID, up)
 		if err != nil {
@@ -800,8 +800,8 @@ func (m *MainModel) saveAdd() error {
 	_, err := m.store.AddWithParams(m.addScope, m.addCtxKey, store.AddParams{
 		Text:     text,
 		ParentID: m.addParent,
-		Priority: m.pendingPri,
-		Tags:     store.NormalizeTags(m.pendingTags),
+		Priority: m.priorityValue,
+		Tags:     store.NormalizeTags(m.tagsValue),
 	})
 	return err
 }
@@ -867,8 +867,8 @@ func (m *MainModel) cancelAdd() {
 	m.addParent = ""
 	m.addParentLabel = ""
 	m.editID = ""
-	m.pendingPri = ""
-	m.pendingTags = nil
+	m.priorityValue = ""
+	m.tagsValue = nil
 	m.tagPickerMode = ""
 	m.addMode = addText
 }
@@ -884,8 +884,8 @@ func (m *MainModel) finishAdd() {
 	m.addParentLabel = ""
 	m.addCtxKey = m.ctx.Key()
 	m.editID = ""
-	m.pendingPri = ""
-	m.pendingTags = nil
+	m.priorityValue = ""
+	m.tagsValue = nil
 	m.tagPickerMode = ""
 	m.addMode = addText
 }
