@@ -11,9 +11,10 @@ import (
 )
 
 type Data struct {
-	Version int      `json:"version"`
-	Tags    []string `json:"tags"`
-	UI      UIState  `json:"ui,omitempty"`
+	Version     int                 `json:"version"`
+	Tags        []string            `json:"tags"`
+	UI          UIState             `json:"ui,omitempty"`
+	Keybindings map[string][]string `json:"keybindings,omitempty"`
 }
 
 type UIState struct {
@@ -49,6 +50,12 @@ func (s *Store) UI() UIState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.data.UI
+}
+
+func (s *Store) Keybindings() map[string][]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.Keybindings
 }
 
 func (s *Store) SaveUI(ui UIState) error {
