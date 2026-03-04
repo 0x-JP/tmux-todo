@@ -45,12 +45,12 @@ const (
 	viewAllContexts
 )
 
-type addStep int
+type addMode int
 
 const (
-	addStepText addStep = iota
-	addStepPriority
-	addStepTags
+	addText addMode = iota
+	addPri
+	addTags
 )
 
 type MainModel struct {
@@ -67,7 +67,7 @@ type MainModel struct {
 	height         int
 	adding  bool
 	editing bool
-	addStep addStep
+	addMode addMode
 	tagPicker      bool
 	tagCursor      int
 	newTagInput    bool
@@ -135,7 +135,7 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 		tagInput:    tagIn,
 		filterInput: filterIn,
 		addScope:    scope,
-		addStep:     addStepText,
+		addMode:     addText,
 		addCtxKey: func() string {
 			if ctx.IsGit() {
 				return ctx.Key()
@@ -250,8 +250,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.adding {
-			switch m.addStep {
-			case addStepPriority:
+			switch m.addMode {
+			case addPri:
 				switch {
 				case key.Matches(msg, m.keys.GuidedAdd.Cancel):
 					m.cancelAdd()
@@ -270,13 +270,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.finishAdd()
 					}
 				case msg.String() == "tab":
-					m.addStep = addStepTags
+					m.addMode = addTags
 					m.tagCursor = 0
 				case msg.String() == "shift+tab":
-					m.addStep = addStepText
+					m.addMode = addText
 				}
 				return m, nil
-			case addStepTags:
+			case addTags:
 				tags := m.knownTags()
 				switch {
 				case key.Matches(msg, m.keys.GuidedAdd.Cancel):
@@ -303,7 +303,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.finishAdd()
 					}
 				case msg.String() == "shift+tab":
-					m.addStep = addStepPriority
+					m.addMode = addPri
 				}
 				return m, nil
 			default:
@@ -323,7 +323,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.setStatus("enter text before setting options", true)
 						return m, nil
 					}
-					m.addStep = addStepPriority
+					m.addMode = addPri
 					return m, nil
 				}
 				var cmd tea.Cmd
@@ -392,7 +392,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editID = ""
 			m.input.SetValue("")
 			m.input.Focus()
-			m.addStep = addStepText
+			m.addMode = addText
 			m.tagCursor = 0
 			return m, nil
 		case key.Matches(msg, m.keys.Main.AddChild):
@@ -414,7 +414,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.addParentLabel = t.Text
 			}
 			m.input.Focus()
-			m.addStep = addStepText
+			m.addMode = addText
 			m.tagCursor = 0
 			return m, nil
 		case key.Matches(msg, m.keys.Main.Edit):
@@ -434,7 +434,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addTags = append([]string(nil), e.Todo.Tags...)
 			m.input.SetValue(e.Todo.Text)
 			m.input.Focus()
-			m.addStep = addStepText
+			m.addMode = addText
 			m.tagCursor = 0
 			return m, nil
 		case key.Matches(msg, m.keys.Main.PriorityHigh):
@@ -579,8 +579,8 @@ func (m MainModel) View() string {
 			modeLabel = "Edit mode"
 		}
 		b.WriteString(headerStyle.Render(modeLabel))
-		switch m.addStep {
-		case addStepPriority:
+		switch m.addMode {
+		case addPri:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
 			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.addPriority)))
 			b.WriteString(subtleStyle.Render(fmt.Sprintf("%s high  %s med  %s low  0 none  %s save  tab tags  %s cancel",
@@ -590,7 +590,7 @@ func (m MainModel) View() string {
 				m.keys.GuidedAdd.Confirm.Help().Key,
 				m.keys.GuidedAdd.Cancel.Help().Key)))
 			b.WriteString("\n")
-		case addStepTags:
+		case addTags:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
 			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.addPriority)))
 			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.addTags)))
@@ -907,7 +907,7 @@ func (m *MainModel) cancelAdd() {
 	m.addPriority = ""
 	m.addTags = nil
 	m.tagPickerMode = ""
-	m.addStep = addStepText
+	m.addMode = addText
 }
 
 func (m *MainModel) finishAdd() {
@@ -924,7 +924,7 @@ func (m *MainModel) finishAdd() {
 	m.addPriority = ""
 	m.addTags = nil
 	m.tagPickerMode = ""
-	m.addStep = addStepText
+	m.addMode = addText
 }
 
 func (m MainModel) helpView() string {
