@@ -126,8 +126,7 @@ bind-key -n C-t run-shell "~/.tmux/plugins/tmux-todo/scripts/popup.sh quick '#{p
 | `?` | Help overlay |
 | `tab` | Cycle scope (context / global / all-contexts) |
 | `/` | Filter input (`p:high tag:blocked`) |
-| `a` | Quick add (text-only) |
-| `A` | Guided add |
+| `a` | Add (enter saves, tab for priority/tags) |
 | `c` | Add child task |
 | `e` | Edit selected task |
 | `g` | Tag picker for selected task |
