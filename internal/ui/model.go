@@ -47,7 +47,7 @@ type addMode int
 
 const (
 	addText addMode = iota
-	addPri
+	addPriority
 	addTags
 )
 
@@ -82,8 +82,8 @@ type MainModel struct {
 	addCtxKey      string
 	addParent      string
 	addParentLabel string
-	addPriority    store.Priority
-	addTags        []string
+	pendingPri  store.Priority
+	pendingTags []string
 	editID         string
 	status         string
 	statusIsErr    bool
@@ -177,7 +177,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 						// tag added
 					default:
-						m.addTags = mergeTags(m.addTags, newTag)
+						m.pendingTags = mergeTags(m.pendingTags, newTag)
 						if m.cfg != nil {
 							_ = m.cfg.AddTag(newTag[0])
 						}
@@ -220,7 +220,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				case "manage":
 				default:
-					m.addTags = toggleTag(m.addTags, tag)
+					m.pendingTags = toggleTag(m.pendingTags, tag)
 				}
 				return m, nil
 			case "d":
@@ -245,18 +245,18 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.adding {
 			switch m.addMode {
-			case addPri:
+			case addPriority:
 				switch msg.String() {
 				case "esc":
 					m.cancelAdd()
 				case "1":
-					m.addPriority = store.PriorityHigh
+					m.pendingPri = store.PriorityHigh
 				case "2":
-					m.addPriority = store.PriorityMed
+					m.pendingPri = store.PriorityMed
 				case "3":
-					m.addPriority = store.PriorityLow
+					m.pendingPri = store.PriorityLow
 				case "0":
-					m.addPriority = ""
+					m.pendingPri = ""
 				case "enter":
 					if err := m.saveAdd(); err != nil {
 						m.setStatus(err.Error(), true)
@@ -285,7 +285,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				case " ":
 					if len(tags) > 0 {
-						m.addTags = toggleTag(m.addTags, tags[m.tagCursor])
+						m.pendingTags = toggleTag(m.pendingTags, tags[m.tagCursor])
 					}
 				case "n":
 					m.newTagInput = true
@@ -297,7 +297,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.finishAdd()
 					}
 				case "shift+tab":
-					m.addMode = addPri
+					m.addMode = addPriority
 				}
 				return m, nil
 			default:
@@ -317,7 +317,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.setStatus("enter text before setting options", true)
 						return m, nil
 					}
-					m.addMode = addPri
+					m.addMode = addPriority
 					return m, nil
 				}
 				var cmd tea.Cmd
@@ -381,8 +381,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
 			m.addParentLabel = ""
-			m.addPriority = ""
-			m.addTags = nil
+			m.pendingPri = ""
+			m.pendingTags = nil
 			m.editID = ""
 			m.input.SetValue("")
 			m.input.Focus()
@@ -401,8 +401,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
 			m.addParentLabel = ""
-			m.addPriority = t.Priority
-			m.addTags = append([]string(nil), t.Tags...)
+			m.pendingPri = t.Priority
+			m.pendingTags = append([]string(nil), t.Tags...)
 			if t != nil {
 				m.addParent = t.ID
 				m.addParentLabel = t.Text
@@ -424,8 +424,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editID = e.Todo.ID
 			m.addParent = e.Todo.ParentID
 			m.addParentLabel = ""
-			m.addPriority = e.Todo.Priority
-			m.addTags = append([]string(nil), e.Todo.Tags...)
+			m.pendingPri = e.Todo.Priority
+			m.pendingTags = append([]string(nil), e.Todo.Tags...)
 			m.input.SetValue(e.Todo.Text)
 			m.input.Focus()
 			m.addMode = addText
@@ -585,15 +585,15 @@ func (m MainModel) View() string {
 			b.WriteString(fmt.Sprintf("Child of: %s\n", m.parentDisplay()))
 		}
 		switch m.addMode {
-		case addPri:
+		case addPriority:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
-			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.addPriority)))
+			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.pendingPri)))
 			b.WriteString(subtleStyle.Render("1 high  2 med  3 low  0 none  enter save  tab tags  esc cancel"))
 			b.WriteString("\n")
 		case addTags:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
-			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.addPriority)))
-			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.addTags)))
+			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.pendingPri)))
+			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.pendingTags)))
 			tags := m.knownTags()
 			if len(tags) == 0 {
 				b.WriteString("(no tags)\n")
@@ -604,7 +604,7 @@ func (m MainModel) View() string {
 						prefix = "> "
 					}
 					mark := "o"
-					if hasTag(m.addTags, tg) {
+					if hasTag(m.pendingTags, tg) {
 						mark = "●"
 					}
 					b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
@@ -788,8 +788,8 @@ func (m *MainModel) saveAdd() error {
 	if m.editing {
 		up := store.UpdateParams{}
 		up.Text = &text
-		up.Priority = &m.addPriority
-		tags := store.NormalizeTags(m.addTags)
+		up.Priority = &m.pendingPri
+		tags := store.NormalizeTags(m.pendingTags)
 		up.Tags = &tags
 		_, err := m.store.Update(m.addScope, m.addCtxKey, m.editID, up)
 		if err != nil {
@@ -800,8 +800,8 @@ func (m *MainModel) saveAdd() error {
 	_, err := m.store.AddWithParams(m.addScope, m.addCtxKey, store.AddParams{
 		Text:     text,
 		ParentID: m.addParent,
-		Priority: m.addPriority,
-		Tags:     store.NormalizeTags(m.addTags),
+		Priority: m.pendingPri,
+		Tags:     store.NormalizeTags(m.pendingTags),
 	})
 	return err
 }
@@ -867,8 +867,8 @@ func (m *MainModel) cancelAdd() {
 	m.addParent = ""
 	m.addParentLabel = ""
 	m.editID = ""
-	m.addPriority = ""
-	m.addTags = nil
+	m.pendingPri = ""
+	m.pendingTags = nil
 	m.tagPickerMode = ""
 	m.addMode = addText
 }
@@ -884,8 +884,8 @@ func (m *MainModel) finishAdd() {
 	m.addParentLabel = ""
 	m.addCtxKey = m.ctx.Key()
 	m.editID = ""
-	m.addPriority = ""
-	m.addTags = nil
+	m.pendingPri = ""
+	m.pendingTags = nil
 	m.tagPickerMode = ""
 	m.addMode = addText
 }
