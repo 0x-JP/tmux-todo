@@ -65,10 +65,9 @@ type MainModel struct {
 	cursor         int
 	width          int
 	height         int
-	adding         bool
-	editing        bool
-	guidedAdd      bool
-	addStep        guidedStep
+	adding  bool
+	editing bool
+	addStep guidedStep
 	tagPicker      bool
 	tagCursor      int
 	newTagInput    bool
@@ -253,89 +252,86 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.adding {
-			if m.guidedAdd {
-				switch m.addStep {
-				case guidedStepPriority:
-					switch {
-					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
-						m.cancelAdd()
-					case key.Matches(msg, m.keys.Main.PriorityHigh):
-						m.addPriority = store.PriorityHigh
-						m.addStep = guidedStepTags
-					case key.Matches(msg, m.keys.Main.PriorityMed):
-						m.addPriority = store.PriorityMed
-						m.addStep = guidedStepTags
-					case key.Matches(msg, m.keys.Main.PriorityLow):
-						m.addPriority = store.PriorityLow
-						m.addStep = guidedStepTags
-					case key.Matches(msg, m.keys.Main.PriorityClear) ||
-						key.Matches(msg, m.keys.GuidedAdd.Confirm) ||
-						msg.String() == "0" || msg.String() == "n":
-						m.addPriority = ""
-						m.addStep = guidedStepTags
+			switch m.addStep {
+			case guidedStepPriority:
+				switch {
+				case key.Matches(msg, m.keys.GuidedAdd.Cancel):
+					m.cancelAdd()
+				case key.Matches(msg, m.keys.Main.PriorityHigh):
+					m.addPriority = store.PriorityHigh
+				case key.Matches(msg, m.keys.Main.PriorityMed):
+					m.addPriority = store.PriorityMed
+				case key.Matches(msg, m.keys.Main.PriorityLow):
+					m.addPriority = store.PriorityLow
+				case msg.String() == "0":
+					m.addPriority = ""
+				case key.Matches(msg, m.keys.GuidedAdd.Confirm):
+					if err := m.saveAdd(); err != nil {
+						m.setStatus(err.Error(), true)
+					} else {
+						m.finishAdd()
 					}
-					return m, nil
-				case guidedStepTags:
-					tags := m.knownTags()
-					switch {
-					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
-						m.cancelAdd()
-					case key.Matches(msg, m.keys.TagPicker.MoveUp):
-						if m.tagCursor > 0 {
-							m.tagCursor--
-						}
-					case key.Matches(msg, m.keys.TagPicker.MoveDown):
-						if m.tagCursor < len(tags)-1 {
-							m.tagCursor++
-						}
-					case key.Matches(msg, m.keys.TagPicker.Toggle):
-						if len(tags) > 0 {
-							m.addTags = toggleTag(m.addTags, tags[m.tagCursor])
-						}
-					case key.Matches(msg, m.keys.TagPicker.NewTag):
-						m.newTagInput = true
-						m.tagInput.Focus()
-					case key.Matches(msg, m.keys.GuidedAdd.Confirm):
-						if err := m.saveAdd(); err != nil {
-							m.setStatus(err.Error(), true)
-						} else {
-							m.finishAdd()
-						}
-					}
-					return m, nil
-				default:
-					switch {
-					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
-						m.cancelAdd()
-						return m, nil
-					case key.Matches(msg, m.keys.GuidedAdd.Confirm):
-						if strings.TrimSpace(m.input.Value()) == "" {
-							m.setStatus("todo text cannot be empty", true)
-							return m, nil
-						}
-						m.addStep = guidedStepPriority
-						return m, nil
-					}
-					var cmd tea.Cmd
-					m.input, cmd = m.input.Update(msg)
-					return m, cmd
-				}
-			}
-			switch {
-			case key.Matches(msg, m.keys.GuidedAdd.Cancel):
-				m.cancelAdd()
-				return m, nil
-			case key.Matches(msg, m.keys.GuidedAdd.Confirm):
-				if err := m.saveAdd(); err != nil {
-					m.setStatus(err.Error(), true)
-				} else {
-					m.finishAdd()
+				case msg.String() == "tab":
+					m.addStep = guidedStepTags
+					m.tagCursor = 0
+				case msg.String() == "shift+tab":
+					m.addStep = guidedStepText
 				}
 				return m, nil
+			case guidedStepTags:
+				tags := m.knownTags()
+				switch {
+				case key.Matches(msg, m.keys.GuidedAdd.Cancel):
+					m.cancelAdd()
+				case key.Matches(msg, m.keys.TagPicker.MoveUp):
+					if m.tagCursor > 0 {
+						m.tagCursor--
+					}
+				case key.Matches(msg, m.keys.TagPicker.MoveDown):
+					if m.tagCursor < len(tags)-1 {
+						m.tagCursor++
+					}
+				case key.Matches(msg, m.keys.TagPicker.Toggle):
+					if len(tags) > 0 {
+						m.addTags = toggleTag(m.addTags, tags[m.tagCursor])
+					}
+				case key.Matches(msg, m.keys.TagPicker.NewTag):
+					m.newTagInput = true
+					m.tagInput.Focus()
+				case key.Matches(msg, m.keys.GuidedAdd.Confirm):
+					if err := m.saveAdd(); err != nil {
+						m.setStatus(err.Error(), true)
+					} else {
+						m.finishAdd()
+					}
+				case msg.String() == "shift+tab":
+					m.addStep = guidedStepPriority
+				}
+				return m, nil
+			default:
+				switch {
+				case key.Matches(msg, m.keys.GuidedAdd.Cancel):
+					m.cancelAdd()
+					return m, nil
+				case key.Matches(msg, m.keys.GuidedAdd.Confirm):
+					if err := m.saveAdd(); err != nil {
+						m.setStatus(err.Error(), true)
+					} else {
+						m.finishAdd()
+					}
+					return m, nil
+				case msg.String() == "tab":
+					if strings.TrimSpace(m.input.Value()) == "" {
+						m.setStatus("enter text before setting options", true)
+						return m, nil
+					}
+					m.addStep = guidedStepPriority
+					return m, nil
+				}
+				var cmd tea.Cmd
+				m.input, cmd = m.input.Update(msg)
+				return m, cmd
 			}
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
 		}
 		if m.filtering {
 			switch {
@@ -389,23 +385,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Main.QuickAdd):
 			m.adding = true
 			m.editing = false
-			m.guidedAdd = false
-			m.tagPickerMode = "add"
-			m.addScope, m.addCtxKey = m.defaultAddTarget()
-			m.addParent = ""
-			m.addParentLabel = ""
-			m.addPriority = ""
-			m.addTags = nil
-			m.editID = ""
-			m.input.SetValue("")
-			m.input.Focus()
-			m.addStep = guidedStepText
-			m.tagCursor = 0
-			return m, nil
-		case key.Matches(msg, m.keys.Main.GuidedAdd):
-			m.adding = true
-			m.editing = false
-			m.guidedAdd = true
 			m.tagPickerMode = "add"
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
@@ -426,7 +405,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.adding = true
 			m.editing = false
-			m.guidedAdd = true
 			m.tagPickerMode = "add"
 			m.addScope, m.addCtxKey = m.defaultAddTarget()
 			m.addParent = ""
@@ -448,7 +426,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.adding = true
 			m.editing = true
-			m.guidedAdd = true
 			m.tagPickerMode = "add"
 			m.addScope = e.Scope
 			m.addCtxKey = e.CtxKey
@@ -599,70 +576,61 @@ func (m MainModel) View() string {
 
 	b.WriteString("\n")
 	if m.adding {
-		target := "context"
-		if m.addScope == store.ScopeGlobal {
-			target = "global"
-		}
-		parent := "none"
 		if m.addParent != "" {
-			parent = m.parentDisplay()
+			b.WriteString(fmt.Sprintf("Child of: %s\n", m.parentDisplay()))
 		}
 		modeLabel := "Add mode"
 		if m.editing {
 			modeLabel = "Edit mode"
 		}
 		b.WriteString(headerStyle.Render(modeLabel))
-		b.WriteString(" (enter saves, esc cancels)\n")
-		b.WriteString(fmt.Sprintf("Target: %s | Parent: %s\n", target, parent))
-		if m.guidedAdd {
-			switch m.addStep {
-			case guidedStepPriority:
-				b.WriteString("Step 2/3: Priority\n")
-				b.WriteString(fmt.Sprintf("Current: %s\n", displayPriority(m.addPriority)))
-				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s high | %s med | %s low | %s/0 none",
-					m.keys.Main.PriorityHigh.Help().Key,
-					m.keys.Main.PriorityMed.Help().Key,
-					m.keys.Main.PriorityLow.Help().Key,
-					m.keys.GuidedAdd.Confirm.Help().Key)))
-				b.WriteString("\n")
-			case guidedStepTags:
-				b.WriteString("Step 3/3: Tags\n")
-				b.WriteString(fmt.Sprintf("Selected: %s\n", displayTags(m.addTags)))
-				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s toggle | %s new tag | %s save",
-					m.keys.TagPicker.Toggle.Help().Key,
-					m.keys.TagPicker.NewTag.Help().Key,
-					m.keys.GuidedAdd.Confirm.Help().Key)))
-				b.WriteString("\n")
-				tags := m.knownTags()
-				if len(tags) == 0 {
-					b.WriteString("(no tags)\n")
-				} else {
-					for i, tg := range tags {
-						prefix := "  "
-						if i == m.tagCursor {
-							prefix = "> "
-						}
-						mark := "󰄱"
-						if hasTag(m.addTags, tg) {
-							mark = "󰄲"
-						}
-						b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
+		switch m.addStep {
+		case guidedStepPriority:
+			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
+			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.addPriority)))
+			b.WriteString(subtleStyle.Render(fmt.Sprintf("%s high  %s med  %s low  0 none  %s save  tab tags  %s cancel",
+				m.keys.Main.PriorityHigh.Help().Key,
+				m.keys.Main.PriorityMed.Help().Key,
+				m.keys.Main.PriorityLow.Help().Key,
+				m.keys.GuidedAdd.Confirm.Help().Key,
+				m.keys.GuidedAdd.Cancel.Help().Key)))
+			b.WriteString("\n")
+		case guidedStepTags:
+			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
+			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.addPriority)))
+			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.addTags)))
+			tags := m.knownTags()
+			if len(tags) == 0 {
+				b.WriteString("(no tags)\n")
+			} else {
+				for i, tg := range tags {
+					prefix := "  "
+					if i == m.tagCursor {
+						prefix = "> "
 					}
+					mark := "o"
+					if hasTag(m.addTags, tg) {
+						mark = "●"
+					}
+					b.WriteString(fmt.Sprintf("%s%s %s\n", prefix, mark, tg))
 				}
-				if m.newTagInput {
-					b.WriteString(m.tagInput.View())
-					b.WriteString("\n")
-				}
-			default:
-				b.WriteString("Step 1/3: Task text\n")
-				b.WriteString(m.input.View())
-				b.WriteString("\n")
-				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s next", m.keys.GuidedAdd.Confirm.Help().Key)))
+			}
+			if m.newTagInput {
+				b.WriteString(m.tagInput.View())
 				b.WriteString("\n")
 			}
-		} else {
-			b.WriteString("Use A for guided add mode\n")
+			b.WriteString(subtleStyle.Render(fmt.Sprintf("%s toggle  %s new  %s save  %s cancel",
+				m.keys.TagPicker.Toggle.Help().Key,
+				m.keys.TagPicker.NewTag.Help().Key,
+				m.keys.GuidedAdd.Confirm.Help().Key,
+				m.keys.GuidedAdd.Cancel.Help().Key)))
+			b.WriteString("\n")
+		default:
 			b.WriteString(m.input.View())
+			b.WriteString("\n")
+			b.WriteString(subtleStyle.Render(fmt.Sprintf("%s save  tab more  %s cancel",
+				m.keys.GuidedAdd.Confirm.Help().Key,
+				m.keys.GuidedAdd.Cancel.Help().Key)))
 			b.WriteString("\n")
 		}
 	} else {
@@ -938,7 +906,6 @@ func (m *MainModel) restoreUIState() {
 func (m *MainModel) cancelAdd() {
 	m.adding = false
 	m.editing = false
-	m.guidedAdd = false
 	m.tagPicker = false
 	m.newTagInput = false
 	m.tagInput.SetValue("")
@@ -956,7 +923,6 @@ func (m *MainModel) cancelAdd() {
 func (m *MainModel) finishAdd() {
 	m.adding = false
 	m.editing = false
-	m.guidedAdd = false
 	m.tagPicker = false
 	m.newTagInput = false
 	m.tagInput.SetValue("")
@@ -986,17 +952,18 @@ func (m MainModel) helpView() string {
 	b.WriteString(h.FullHelpView(hkm.FullHelp()))
 
 	k := m.keys
-	b.WriteString("\n\nGuided mode:\n")
-	b.WriteString(fmt.Sprintf("  step1 text: %s next\n", k.GuidedAdd.Confirm.Help().Key))
-	b.WriteString(fmt.Sprintf("  step2 priority: %s/%s/%s or %s for none\n",
+	b.WriteString("\n\nAdd/edit flow:\n")
+	b.WriteString(fmt.Sprintf("  text step: %s save, tab for priority\n", k.GuidedAdd.Confirm.Help().Key))
+	b.WriteString(fmt.Sprintf("  priority step: %s/%s/%s/0, %s save, tab for tags\n",
 		k.Main.PriorityHigh.Help().Key,
 		k.Main.PriorityMed.Help().Key,
 		k.Main.PriorityLow.Help().Key,
 		k.GuidedAdd.Confirm.Help().Key))
-	b.WriteString(fmt.Sprintf("  step3 tags: %s toggle, %s new tag, %s save\n",
+	b.WriteString(fmt.Sprintf("  tags step: %s toggle, %s new, %s save\n",
 		k.TagPicker.Toggle.Help().Key,
 		k.TagPicker.NewTag.Help().Key,
 		k.GuidedAdd.Confirm.Help().Key))
+	b.WriteString("  shift+tab go back\n")
 	b.WriteString(fmt.Sprintf("  %s cancel at any step\n", k.GuidedAdd.Cancel.Help().Key))
 	b.WriteString("\nFilter examples:\n")
 	b.WriteString("  p:high\n")
