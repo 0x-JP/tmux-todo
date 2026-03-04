@@ -175,7 +175,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						if m.cfg != nil {
 							_ = m.cfg.AddTag(newTag[0])
 						}
-						m.setStatus("tag added to registry", false)
+						// tag added
 					default:
 						m.addTags = mergeTags(m.addTags, newTag)
 						if m.cfg != nil {
@@ -217,8 +217,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "task":
 					if err := m.applyTaskTagToggle(tag, false); err != nil {
 						m.setStatus(err.Error(), true)
-					} else {
-						m.setStatus("task tags updated", false)
 					}
 				case "manage":
 				default:
@@ -232,7 +230,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						_ = m.cfg.RemoveTag(tag)
 					}
 					_ = m.store.RemoveTag(tag)
-					m.setStatus("tag removed globally", false)
+					// tag removed
 					if m.tagCursor > 0 {
 						m.tagCursor--
 					}
@@ -451,8 +449,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Priority: &p}); err != nil {
 				m.setStatus(err.Error(), true)
-			} else {
-				m.setStatus("priority updated", false)
 			}
 			return m, nil
 		case "b", "r":
@@ -467,8 +463,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tags := toggleTag(e.Todo.Tags, tag)
 			if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Tags: &tags}); err != nil {
 				m.setStatus(err.Error(), true)
-			} else {
-				m.setStatus("tags updated", false)
 			}
 			return m, nil
 		case "g":
@@ -497,8 +491,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if err := m.store.Toggle(e.Scope, e.CtxKey, e.Todo.ID); err != nil {
 				m.setStatus(err.Error(), true)
-			} else {
-				m.setStatus("todo toggled", false)
 			}
 			return m, nil
 		case "d":
@@ -509,7 +501,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := m.store.Delete(e.Scope, e.CtxKey, e.Todo.ID); err != nil {
 				m.setStatus(err.Error(), true)
 			} else {
-				m.setStatus("todo deleted", false)
 				if m.cursor > 0 && m.cursor >= len(m.currentEntries(false)) {
 					m.cursor--
 				}
@@ -635,6 +626,7 @@ func (m MainModel) View() string {
 		b.WriteString(subtleStyle.Render("Keys: ? help | tab scope | / filter | a add | c add-child | e edit"))
 		b.WriteString("\n")
 		b.WriteString(subtleStyle.Render("      1/2/3/! priority(high/med/low/clear) | b/r tags | space toggle | d delete | j/k move | q quit"))
+		b.WriteString("\n")
 		if m.tagPicker && m.tagPickerMode == "task" {
 			b.WriteString("\n")
 			b.WriteString(headerStyle.Render("Task Tag Picker"))
@@ -803,7 +795,6 @@ func (m *MainModel) saveAdd() error {
 		if err != nil {
 			return err
 		}
-		m.setStatus("todo updated", false)
 		return nil
 	}
 	_, err := m.store.AddWithParams(m.addScope, m.addCtxKey, store.AddParams{
@@ -812,11 +803,7 @@ func (m *MainModel) saveAdd() error {
 		Priority: m.addPriority,
 		Tags:     store.NormalizeTags(m.addTags),
 	})
-	if err != nil {
-		return err
-	}
-	m.setStatus("todo added", false)
-	return nil
+	return err
 }
 
 func (m *MainModel) persistUIState() {
@@ -876,7 +863,6 @@ func (m *MainModel) cancelAdd() {
 	m.tagPicker = false
 	m.newTagInput = false
 	m.tagInput.SetValue("")
-	m.setStatus("add canceled", false)
 	m.input.SetValue("")
 	m.addParent = ""
 	m.addParentLabel = ""
