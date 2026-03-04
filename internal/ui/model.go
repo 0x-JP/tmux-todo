@@ -43,12 +43,12 @@ const (
 	viewAllContexts
 )
 
-type guidedStep int
+type addField int
 
 const (
-	guidedStepText guidedStep = iota
-	guidedStepPriority
-	guidedStepTags
+	addFieldText addField = iota
+	addFieldPriority
+	addFieldTags
 )
 
 type MainModel struct {
@@ -63,7 +63,7 @@ type MainModel struct {
 	height         int
 	adding  bool
 	editing bool
-	addStep guidedStep
+	addField addField
 	tagPicker      bool
 	tagCursor      int
 	newTagInput    bool
@@ -129,7 +129,7 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 		tagInput:    tagIn,
 		filterInput: filterIn,
 		addScope:    scope,
-		addStep:     guidedStepText,
+		addField:     addFieldText,
 		addCtxKey: func() string {
 			if ctx.IsGit() {
 				return ctx.Key()
@@ -244,8 +244,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.adding {
-			switch m.addStep {
-			case guidedStepPriority:
+			switch m.addField {
+			case addFieldPriority:
 				switch msg.String() {
 				case "esc":
 					m.cancelAdd()
@@ -264,13 +264,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.finishAdd()
 					}
 				case "tab":
-					m.addStep = guidedStepTags
+					m.addField = addFieldTags
 					m.tagCursor = 0
 				case "shift+tab":
-					m.addStep = guidedStepText
+					m.addField = addFieldText
 				}
 				return m, nil
-			case guidedStepTags:
+			case addFieldTags:
 				tags := m.knownTags()
 				switch msg.String() {
 				case "esc":
@@ -297,7 +297,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.finishAdd()
 					}
 				case "shift+tab":
-					m.addStep = guidedStepPriority
+					m.addField = addFieldPriority
 				}
 				return m, nil
 			default:
@@ -317,7 +317,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.setStatus("enter text before setting options", true)
 						return m, nil
 					}
-					m.addStep = guidedStepPriority
+					m.addField = addFieldPriority
 					return m, nil
 				}
 				var cmd tea.Cmd
@@ -386,7 +386,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editID = ""
 			m.input.SetValue("")
 			m.input.Focus()
-			m.addStep = guidedStepText
+			m.addField = addFieldText
 			m.tagCursor = 0
 			return m, nil
 		case "c":
@@ -408,7 +408,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.addParentLabel = t.Text
 			}
 			m.input.Focus()
-			m.addStep = guidedStepText
+			m.addField = addFieldText
 			m.tagCursor = 0
 			return m, nil
 		case "e":
@@ -428,7 +428,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addTags = append([]string(nil), e.Todo.Tags...)
 			m.input.SetValue(e.Todo.Text)
 			m.input.Focus()
-			m.addStep = guidedStepText
+			m.addField = addFieldText
 			m.tagCursor = 0
 			return m, nil
 		case "1", "2", "3", "!":
@@ -584,13 +584,13 @@ func (m MainModel) View() string {
 		if m.addParent != "" {
 			b.WriteString(fmt.Sprintf("Child of: %s\n", m.parentDisplay()))
 		}
-		switch m.addStep {
-		case guidedStepPriority:
+		switch m.addField {
+		case addFieldPriority:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
 			b.WriteString(fmt.Sprintf("Priority  %s\n", displayPriority(m.addPriority)))
 			b.WriteString(subtleStyle.Render("1 high  2 med  3 low  0 none  enter save  tab tags  esc cancel"))
 			b.WriteString("\n")
-		case guidedStepTags:
+		case addFieldTags:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
 			b.WriteString(fmt.Sprintf("Priority: %s\n", displayPriority(m.addPriority)))
 			b.WriteString(fmt.Sprintf("Tags  %s\n", displayTags(m.addTags)))
@@ -870,7 +870,7 @@ func (m *MainModel) cancelAdd() {
 	m.addPriority = ""
 	m.addTags = nil
 	m.tagPickerMode = ""
-	m.addStep = guidedStepText
+	m.addField = addFieldText
 }
 
 func (m *MainModel) finishAdd() {
@@ -887,7 +887,7 @@ func (m *MainModel) finishAdd() {
 	m.addPriority = ""
 	m.addTags = nil
 	m.tagPickerMode = ""
-	m.addStep = guidedStepText
+	m.addField = addFieldText
 }
 
 func (m MainModel) helpView() string {
