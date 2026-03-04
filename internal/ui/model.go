@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -56,6 +58,8 @@ type MainModel struct {
 	cfg    *config.Store
 	ctx    gitctx.Context
 	strike bool
+	keys   KeyMap
+	help   help.Model
 
 	mode           viewMode
 	cursor         int
@@ -90,7 +94,7 @@ type MainModel struct {
 	statusIsErr    bool
 }
 
-func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike bool) MainModel {
+func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike bool, keys KeyMap) MainModel {
 	scope := store.ScopeContext
 	if !ctx.IsGit() {
 		scope = store.ScopeGlobal
@@ -125,6 +129,8 @@ func NewMainModel(st *store.Store, cfg *config.Store, ctx gitctx.Context, strike
 		cfg:         cfg,
 		ctx:         ctx,
 		strike:      strike,
+		keys:        keys,
+		help:        help.New(),
 		mode:        mode,
 		input:       ti,
 		tagInput:    tagIn,
@@ -149,11 +155,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.help.Width = msg.Width - 4
 		return m, nil
 	case tea.KeyMsg:
 		if m.showHelp {
-			switch msg.String() {
-			case "?", "esc", "q", "enter", "ctrl+c":
+			if key.Matches(msg, m.keys.Help.Close) {
 				m.showHelp = false
 			}
 			return m, nil
@@ -194,22 +200,22 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.tagPicker {
 			tags := m.knownTags()
-			switch msg.String() {
-			case "esc", "enter":
+			switch {
+			case key.Matches(msg, m.keys.TagPicker.Close):
 				m.tagPicker = false
 				m.newTagInput = false
 				return m, nil
-			case "up", "k":
+			case key.Matches(msg, m.keys.TagPicker.MoveUp):
 				if m.tagCursor > 0 {
 					m.tagCursor--
 				}
 				return m, nil
-			case "down", "j":
+			case key.Matches(msg, m.keys.TagPicker.MoveDown):
 				if m.tagCursor < len(tags)-1 {
 					m.tagCursor++
 				}
 				return m, nil
-			case " ":
+			case key.Matches(msg, m.keys.TagPicker.Toggle):
 				if len(tags) == 0 {
 					return m, nil
 				}
@@ -226,7 +232,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.addTags = toggleTag(m.addTags, tag)
 				}
 				return m, nil
-			case "d":
+			case key.Matches(msg, m.keys.TagPicker.DeleteTag):
 				if m.tagPickerMode == "manage" && len(tags) > 0 {
 					tag := tags[m.tagCursor]
 					if m.cfg != nil {
@@ -239,7 +245,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
-			case "n":
+			case key.Matches(msg, m.keys.TagPicker.NewTag):
 				m.newTagInput = true
 				m.tagInput.Focus()
 				return m, nil
@@ -250,44 +256,46 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.guidedAdd {
 				switch m.addStep {
 				case guidedStepPriority:
-					switch msg.String() {
-					case "esc":
+					switch {
+					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
 						m.cancelAdd()
-					case "1":
+					case key.Matches(msg, m.keys.Main.PriorityHigh):
 						m.addPriority = store.PriorityHigh
 						m.addStep = guidedStepTags
-					case "2":
+					case key.Matches(msg, m.keys.Main.PriorityMed):
 						m.addPriority = store.PriorityMed
 						m.addStep = guidedStepTags
-					case "3":
+					case key.Matches(msg, m.keys.Main.PriorityLow):
 						m.addPriority = store.PriorityLow
 						m.addStep = guidedStepTags
-					case "0", "!", "n", "enter":
+					case key.Matches(msg, m.keys.Main.PriorityClear) ||
+						key.Matches(msg, m.keys.GuidedAdd.Confirm) ||
+						msg.String() == "0" || msg.String() == "n":
 						m.addPriority = ""
 						m.addStep = guidedStepTags
 					}
 					return m, nil
 				case guidedStepTags:
 					tags := m.knownTags()
-					switch msg.String() {
-					case "esc":
+					switch {
+					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
 						m.cancelAdd()
-					case "up", "k":
+					case key.Matches(msg, m.keys.TagPicker.MoveUp):
 						if m.tagCursor > 0 {
 							m.tagCursor--
 						}
-					case "down", "j":
+					case key.Matches(msg, m.keys.TagPicker.MoveDown):
 						if m.tagCursor < len(tags)-1 {
 							m.tagCursor++
 						}
-					case " ":
+					case key.Matches(msg, m.keys.TagPicker.Toggle):
 						if len(tags) > 0 {
 							m.addTags = toggleTag(m.addTags, tags[m.tagCursor])
 						}
-					case "n":
+					case key.Matches(msg, m.keys.TagPicker.NewTag):
 						m.newTagInput = true
 						m.tagInput.Focus()
-					case "enter":
+					case key.Matches(msg, m.keys.GuidedAdd.Confirm):
 						if err := m.saveAdd(); err != nil {
 							m.setStatus(err.Error(), true)
 						} else {
@@ -296,11 +304,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					return m, nil
 				default:
-					switch msg.String() {
-					case "esc":
+					switch {
+					case key.Matches(msg, m.keys.GuidedAdd.Cancel):
 						m.cancelAdd()
 						return m, nil
-					case "enter":
+					case key.Matches(msg, m.keys.GuidedAdd.Confirm):
 						if strings.TrimSpace(m.input.Value()) == "" {
 							m.setStatus("todo text cannot be empty", true)
 							return m, nil
@@ -313,11 +321,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, cmd
 				}
 			}
-			switch msg.String() {
-			case "esc":
+			switch {
+			case key.Matches(msg, m.keys.GuidedAdd.Cancel):
 				m.cancelAdd()
 				return m, nil
-			case "enter":
+			case key.Matches(msg, m.keys.GuidedAdd.Confirm):
 				if err := m.saveAdd(); err != nil {
 					m.setStatus(err.Error(), true)
 				} else {
@@ -330,11 +338,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		if m.filtering {
-			switch msg.String() {
-			case "esc":
+			switch {
+			case key.Matches(msg, m.keys.Filter.Cancel):
 				m.filtering = false
 				return m, nil
-			case "enter":
+			case key.Matches(msg, m.keys.Filter.Apply):
 				m.applyFilter(m.filterInput.Value())
 				m.filtering = false
 				m.cursor = 0
@@ -345,40 +353,40 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		switch msg.String() {
-		case "q", "ctrl+c":
+		switch {
+		case key.Matches(msg, m.keys.Global.Quit):
 			m.persistUIState()
 			return m, tea.Quit
-		case "?":
+		case key.Matches(msg, m.keys.Global.Help):
 			m.showHelp = true
 			return m, nil
-		case "/":
+		case key.Matches(msg, m.keys.Global.Filter):
 			m.filtering = true
 			m.filterInput.SetValue("")
 			m.filterInput.Focus()
 			return m, nil
-		case "tab":
+		case key.Matches(msg, m.keys.Main.CycleScope):
 			m.mode = (m.mode + 1) % 3
 			m.cursor = 0
 			return m, nil
-		case "[":
+		case key.Matches(msg, m.keys.Main.PrevContext):
 			m.shiftContext(-1)
 			return m, nil
-		case "]":
+		case key.Matches(msg, m.keys.Main.NextContext):
 			m.shiftContext(1)
 			return m, nil
-		case "up", "k":
+		case key.Matches(msg, m.keys.Main.MoveUp):
 			if m.cursor > 0 {
 				m.cursor--
 			}
 			return m, nil
-		case "down", "j":
+		case key.Matches(msg, m.keys.Main.MoveDown):
 			max := len(m.currentEntries(false)) - 1
 			if m.cursor < max {
 				m.cursor++
 			}
 			return m, nil
-		case "a":
+		case key.Matches(msg, m.keys.Main.QuickAdd):
 			m.adding = true
 			m.editing = false
 			m.guidedAdd = false
@@ -394,7 +402,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addStep = guidedStepText
 			m.tagCursor = 0
 			return m, nil
-		case "A":
+		case key.Matches(msg, m.keys.Main.GuidedAdd):
 			m.adding = true
 			m.editing = false
 			m.guidedAdd = true
@@ -410,7 +418,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addStep = guidedStepText
 			m.tagCursor = 0
 			return m, nil
-		case "c":
+		case key.Matches(msg, m.keys.Main.AddChild):
 			t := m.currentTodo()
 			if t == nil {
 				m.setStatus("select a todo to add a child", false)
@@ -433,7 +441,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addStep = guidedStepText
 			m.tagCursor = 0
 			return m, nil
-		case "e":
+		case key.Matches(msg, m.keys.Main.Edit):
 			e := m.currentEntry()
 			if e == nil || e.IsHeader {
 				return m, nil
@@ -454,45 +462,25 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addStep = guidedStepText
 			m.tagCursor = 0
 			return m, nil
-		case "1", "2", "3", "!":
-			e := m.currentEntry()
-			if e == nil || e.IsHeader {
-				return m, nil
-			}
-			var p store.Priority
-			switch msg.String() {
-			case "1":
-				p = store.PriorityHigh
-			case "2":
-				p = store.PriorityMed
-			case "3":
-				p = store.PriorityLow
-			case "!":
-				p = ""
-			}
-			if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Priority: &p}); err != nil {
-				m.setStatus(err.Error(), true)
-			} else {
-				m.setStatus("priority updated", false)
-			}
+		case key.Matches(msg, m.keys.Main.PriorityHigh):
+			m.applyPriority(store.PriorityHigh)
 			return m, nil
-		case "b", "r":
-			e := m.currentEntry()
-			if e == nil || e.IsHeader {
-				return m, nil
-			}
-			tag := "blocked"
-			if msg.String() == "r" {
-				tag = "review"
-			}
-			tags := toggleTag(e.Todo.Tags, tag)
-			if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Tags: &tags}); err != nil {
-				m.setStatus(err.Error(), true)
-			} else {
-				m.setStatus("tags updated", false)
-			}
+		case key.Matches(msg, m.keys.Main.PriorityMed):
+			m.applyPriority(store.PriorityMed)
 			return m, nil
-		case "g":
+		case key.Matches(msg, m.keys.Main.PriorityLow):
+			m.applyPriority(store.PriorityLow)
+			return m, nil
+		case key.Matches(msg, m.keys.Main.PriorityClear):
+			m.applyPriority("")
+			return m, nil
+		case key.Matches(msg, m.keys.Main.ToggleBlocked):
+			m.applyStatusTag("blocked")
+			return m, nil
+		case key.Matches(msg, m.keys.Main.ToggleReview):
+			m.applyStatusTag("review")
+			return m, nil
+		case key.Matches(msg, m.keys.Main.TagPicker):
 			e := m.currentEntry()
 			if e == nil || e.IsHeader {
 				return m, nil
@@ -505,13 +493,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tagPickID = e.Todo.ID
 			m.tagCursor = 0
 			return m, nil
-		case "G":
+		case key.Matches(msg, m.keys.Main.TagManager):
 			m.tagPicker = true
 			m.newTagInput = false
 			m.tagPickerMode = "manage"
 			m.tagCursor = 0
 			return m, nil
-		case " ":
+		case key.Matches(msg, m.keys.Main.ToggleDone):
 			e := m.currentEntry()
 			if e == nil || e.IsHeader {
 				return m, nil
@@ -522,7 +510,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.setStatus("todo toggled", false)
 			}
 			return m, nil
-		case "d":
+		case key.Matches(msg, m.keys.Main.Delete):
 			e := m.currentEntry()
 			if e == nil || e.IsHeader {
 				return m, nil
@@ -631,12 +619,19 @@ func (m MainModel) View() string {
 			case guidedStepPriority:
 				b.WriteString("Step 2/3: Priority\n")
 				b.WriteString(fmt.Sprintf("Current: %s\n", displayPriority(m.addPriority)))
-				b.WriteString(subtleStyle.Render("1 high | 2 med | 3 low | enter/0 none"))
+				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s high | %s med | %s low | %s/0 none",
+					m.keys.Main.PriorityHigh.Help().Key,
+					m.keys.Main.PriorityMed.Help().Key,
+					m.keys.Main.PriorityLow.Help().Key,
+					m.keys.GuidedAdd.Confirm.Help().Key)))
 				b.WriteString("\n")
 			case guidedStepTags:
 				b.WriteString("Step 3/3: Tags\n")
 				b.WriteString(fmt.Sprintf("Selected: %s\n", displayTags(m.addTags)))
-				b.WriteString(subtleStyle.Render("space toggle | n new tag | enter save"))
+				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s toggle | %s new tag | %s save",
+					m.keys.TagPicker.Toggle.Help().Key,
+					m.keys.TagPicker.NewTag.Help().Key,
+					m.keys.GuidedAdd.Confirm.Help().Key)))
 				b.WriteString("\n")
 				tags := m.knownTags()
 				if len(tags) == 0 {
@@ -662,7 +657,7 @@ func (m MainModel) View() string {
 				b.WriteString("Step 1/3: Task text\n")
 				b.WriteString(m.input.View())
 				b.WriteString("\n")
-				b.WriteString(subtleStyle.Render("enter next"))
+				b.WriteString(subtleStyle.Render(fmt.Sprintf("%s next", m.keys.GuidedAdd.Confirm.Help().Key)))
 				b.WriteString("\n")
 			}
 		} else {
@@ -671,14 +666,17 @@ func (m MainModel) View() string {
 			b.WriteString("\n")
 		}
 	} else {
-		b.WriteString(subtleStyle.Render("Keys: ? help | tab scope | / filter | a quick-add | A guided-add | c add-child | e edit"))
-		b.WriteString("\n")
-		b.WriteString(subtleStyle.Render("      1/2/3/! priority(high/med/low/clear) | b/r tags | space toggle | d delete | j/k move | q quit"))
+		h := m.help
+		h.ShowAll = false
+		b.WriteString(h.View(mainHelpKeyMap{km: m.keys}))
 		if m.tagPicker && m.tagPickerMode == "task" {
 			b.WriteString("\n")
 			b.WriteString(headerStyle.Render("Task Tag Picker"))
 			b.WriteString("\n")
-			b.WriteString("space toggle | n new tag | esc close\n")
+			b.WriteString(fmt.Sprintf("%s toggle | %s new tag | %s close\n",
+				m.keys.TagPicker.Toggle.Help().Key,
+				m.keys.TagPicker.NewTag.Help().Key,
+				m.keys.TagPicker.Close.Help().Key))
 			t := m.lookupTodo(m.tagPickScope, m.tagPickCtx, m.tagPickID)
 			if t != nil {
 				b.WriteString("Task: " + t.Text + "\n")
@@ -734,9 +732,12 @@ func (m MainModel) tagPickerView() string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString(headerStyle.Render("space toggle | n new tag | esc close"))
+	b.WriteString(headerStyle.Render(fmt.Sprintf("%s toggle | %s new tag | %s close",
+		m.keys.TagPicker.Toggle.Help().Key,
+		m.keys.TagPicker.NewTag.Help().Key,
+		m.keys.TagPicker.Close.Help().Key)))
 	if m.tagPickerMode == "manage" {
-		b.WriteString(headerStyle.Render(" | d remove globally"))
+		b.WriteString(headerStyle.Render(fmt.Sprintf(" | %s remove globally", m.keys.TagPicker.DeleteTag.Help().Key)))
 	}
 	b.WriteString("\n\n")
 
@@ -825,6 +826,31 @@ func (m *MainModel) currentEntry() *listEntry {
 func (m *MainModel) setStatus(s string, isErr bool) {
 	m.status = s
 	m.statusIsErr = isErr
+}
+
+func (m *MainModel) applyPriority(p store.Priority) {
+	e := m.currentEntry()
+	if e == nil || e.IsHeader {
+		return
+	}
+	if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Priority: &p}); err != nil {
+		m.setStatus(err.Error(), true)
+	} else {
+		m.setStatus("priority updated", false)
+	}
+}
+
+func (m *MainModel) applyStatusTag(tag string) {
+	e := m.currentEntry()
+	if e == nil || e.IsHeader {
+		return
+	}
+	tags := toggleTag(e.Todo.Tags, tag)
+	if _, err := m.store.Update(e.Scope, e.CtxKey, e.Todo.ID, store.UpdateParams{Tags: &tags}); err != nil {
+		m.setStatus(err.Error(), true)
+	} else {
+		m.setStatus("tags updated", false)
+	}
 }
 
 func (m *MainModel) saveAdd() error {
@@ -948,36 +974,35 @@ func (m *MainModel) finishAdd() {
 func (m MainModel) helpView() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("tmux-todo Help"))
-	b.WriteString("\n")
-	b.WriteString("General:\n")
-	b.WriteString("  ? toggle help | q quit | tab cycle scope | j/k move | / open filter\n")
-	b.WriteString("\n")
-	b.WriteString("Task actions:\n")
-	b.WriteString("  a quick add (text only)\n")
-	b.WriteString("  A guided add (text -> priority -> tags)\n")
-	b.WriteString("  c add child task\n")
-	b.WriteString("  e edit selected task\n")
-	b.WriteString("  g add/remove tags for selected task\n")
-	b.WriteString("  G tag manager (remove tag globally)\n")
-	b.WriteString("  space toggle done | d delete\n")
-	b.WriteString("  1 high | 2 med | 3 low | ! clear priority\n")
-	b.WriteString("  b toggle blocked tag | r toggle review tag\n")
-	b.WriteString("\n")
-	b.WriteString("Guided mode:\n")
-	b.WriteString("  step1 text: enter next\n")
-	b.WriteString("  step2 priority: 1/2/3 or enter for none\n")
-	b.WriteString("  step3 tags: space toggle, n new tag, enter save\n")
-	b.WriteString("  esc cancel at any step\n")
-	b.WriteString("\n")
-	b.WriteString("Tag management:\n")
-	b.WriteString("  g task tag picker (selection mode)\n")
-	b.WriteString("  G global tag manager, d removes selected tag everywhere\n")
-	b.WriteString("\n")
-	b.WriteString("Filter examples:\n")
+	b.WriteString("\n\n")
+
+	h := m.help
+	w := m.width - 4
+	if w < 40 {
+		w = 80
+	}
+	h.Width = w
+	hkm := mainHelpKeyMap{km: m.keys}
+	b.WriteString(h.FullHelpView(hkm.FullHelp()))
+
+	k := m.keys
+	b.WriteString("\n\nGuided mode:\n")
+	b.WriteString(fmt.Sprintf("  step1 text: %s next\n", k.GuidedAdd.Confirm.Help().Key))
+	b.WriteString(fmt.Sprintf("  step2 priority: %s/%s/%s or %s for none\n",
+		k.Main.PriorityHigh.Help().Key,
+		k.Main.PriorityMed.Help().Key,
+		k.Main.PriorityLow.Help().Key,
+		k.GuidedAdd.Confirm.Help().Key))
+	b.WriteString(fmt.Sprintf("  step3 tags: %s toggle, %s new tag, %s save\n",
+		k.TagPicker.Toggle.Help().Key,
+		k.TagPicker.NewTag.Help().Key,
+		k.GuidedAdd.Confirm.Help().Key))
+	b.WriteString(fmt.Sprintf("  %s cancel at any step\n", k.GuidedAdd.Cancel.Help().Key))
+	b.WriteString("\nFilter examples:\n")
 	b.WriteString("  p:high\n")
 	b.WriteString("  tag:blocked\n")
 	b.WriteString("  p:med tag:review\n")
-	b.WriteString("\nPress ? or esc to close help.")
+	b.WriteString(fmt.Sprintf("\nPress %s to close help.", k.Help.Close.Help().Key))
 	return lipgloss.NewStyle().Padding(1, 2).Render(b.String())
 }
 
