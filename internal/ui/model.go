@@ -574,11 +574,6 @@ func (m MainModel) View() string {
 		if m.addParent != "" {
 			b.WriteString(fmt.Sprintf("Child of: %s\n", m.parentDisplay()))
 		}
-		modeLabel := "Add mode"
-		if m.editing {
-			modeLabel = "Edit mode"
-		}
-		b.WriteString(headerStyle.Render(modeLabel))
 		switch m.addMode {
 		case addPriority:
 			b.WriteString(fmt.Sprintf("Task: %s\n", strings.TrimSpace(m.input.Value())))
