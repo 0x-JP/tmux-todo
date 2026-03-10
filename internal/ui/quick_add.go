@@ -94,12 +94,9 @@ func (m QuickAddModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m QuickAddModel) View() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("󱑢 tmux-todo"))
-	b.WriteString(" ")
-	b.WriteString(headerStyle.Render("󰛄 Add Task"))
-	b.WriteString("\n")
-	b.WriteString(subtleStyle.Render("󰉋 "))
-	b.WriteString(contextStyle.Render(quickContextLabel(m.ctx)))
+	b.WriteString(boldStyle.Render("Add Task"))
+	b.WriteString("  ")
+	b.WriteString(dimStyle.Render(quickContextLabel(m.ctx)))
 	b.WriteString("\n")
 	if m.height <= 0 || m.height >= 12 {
 		hints := []string{
@@ -122,13 +119,13 @@ func (m QuickAddModel) View() string {
 	if m.status != "" {
 		b.WriteString("\n")
 		if m.statusIsErr {
-			b.WriteString(statusErr.Render("Error: " + m.status))
+			b.WriteString(errStyle.Render("Error: " + m.status))
 		} else {
-			b.WriteString(statusOK.Render(m.status))
+			b.WriteString(okStyle.Render(m.status))
 		}
 	}
 	b.WriteString("\n")
-	b.WriteString(subtleStyle.Render(fmt.Sprintf("󰌑 %s save  |  %s cancel",
+	b.WriteString(dimStyle.Render(fmt.Sprintf("󰌑 %s save  |  %s cancel",
 		m.keys.QuickAdd.Save.Help().Key,
 		m.keys.QuickAdd.Cancel.Help().Key)))
 	b.WriteString("\n")
